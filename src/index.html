@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Pager Theme Builder</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header id="toolbar">
+    <div class="brand">⌁ <strong>Pager Theme Builder</strong><span class="cursor">▌</span></div>
+    <div id="projectInfo">
+      <span id="projectName">No theme loaded</span>
+      <span id="dirtyBadge" class="hidden" title="Unsaved changes">●</span>
+    </div>
+    <div class="toolbar-actions">
+      <button id="btnNew" title="Clone the bundled reference theme">New theme</button>
+      <button id="btnNewBlank" title="Start with only theme.json and a palette">New blank</button>
+      <button id="btnDuplicate" title="Duplicate the current theme as a new copy">Duplicate</button>
+      <button id="btnOpen">Open folder…</button>
+      <button id="btnOpenZip">Open ZIP…</button>
+      <span class="sep"></span>
+      <button id="btnUndo" disabled title="Undo (Ctrl+Z)">↶</button>
+      <button id="btnRedo" disabled title="Redo (Ctrl+Shift+Z)">↷</button>
+      <span class="sep"></span>
+      <button id="btnSave" disabled>Save</button>
+      <button id="btnSaveAs" disabled>Save as…</button>
+      <button id="btnExport" disabled>Export ZIP</button>
+      <span class="sep"></span>
+      <button id="btnValidate" disabled>Validate</button>
+    </div>
+  </header>
+
+  <div id="app">
+    <nav id="sidebar">
+      <button class="nav-item active" data-tab="metadata">Metadata</button>
+      <button class="nav-item" data-tab="colors">Colors</button>
+      <button class="nav-item" data-tab="components">Components</button>
+      <button class="nav-item" data-tab="themejson">Theme JSON</button>
+      <button class="nav-item" data-tab="assets">Assets</button>
+      <button class="nav-item" data-tab="validation">Validation<span id="validationBadge" class="nav-badge hidden"></span></button>
+    </nav>
+
+    <main id="content">
+      <section id="panel-metadata" class="panel active">
+        <h2>Theme metadata</h2>
+        <p class="muted">Stored in <code>README.md</code> and the top of <code>theme.json</code>.</p>
+        <div class="field">
+          <label for="metaName">Theme name</label>
+          <input id="metaName" type="text" placeholder="My Theme">
+        </div>
+        <div class="field">
+          <label for="metaAuthor">Author</label>
+          <input id="metaAuthor" type="text" placeholder="you">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="metaVersion">Version</label>
+            <input id="metaVersion" type="text" placeholder="1.0.0">
+          </div>
+          <div class="field">
+            <label for="metaFramework">Theme framework version</label>
+            <input id="metaFramework" type="text" placeholder="0.9">
+          </div>
+        </div>
+        <div class="field">
+          <label for="metaDescription">Description</label>
+          <textarea id="metaDescription" rows="4" placeholder="Describe your theme"></textarea>
+        </div>
+        <div class="field">
+          <label>Folder name (slug)</label>
+          <div class="row-inline">
+            <input id="metaDirName" type="text" placeholder="my-theme">
+            <button id="btnSlugify" title="Generate slug from name">↻</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="panel-colors" class="panel">
+        <h2>Color palette</h2>
+        <div class="panel-toolbar">
+          <span class="muted">Colors referenced by components use these names.</span>
+          <div class="spacer"></div>
+          <input id="newColorName" type="text" placeholder="new_color">
+          <button id="btnAddColor">Add color</button>
+          <button id="btnImportPalette">Import palette…</button>
+          <button id="btnExportPalette">Export palette…</button>
+          <button id="btnResetPalette">Reset to default</button>
+        </div>
+        <div id="colorGrid" class="color-grid"></div>
+      </section>
+
+      <section id="panel-components" class="panel">
+        <h2>Components</h2>
+        <div class="split">
+          <div class="split-left">
+            <input id="componentFilter" type="text" placeholder="Filter…">
+            <div class="component-actions">
+              <button id="btnNewComponent" title="Create a component">＋ New</button>
+              <button id="btnDuplicateComponent" disabled title="Duplicate the selected component">Duplicate</button>
+              <button id="btnRenameComponent" disabled title="Rename the selected component and update references">Rename…</button>
+              <button id="btnDeleteComponent" disabled title="Delete the selected component">Delete</button>
+              <button id="btnImportComponent" title="Import a component JSON file">Import…</button>
+              <button id="btnExportComponent" disabled title="Export the selected component as JSON">Export</button>
+            </div>
+            <ul id="componentList" class="file-list"></ul>
+          </div>
+          <div class="split-right">
+            <div class="component-editor-head">
+              <span id="componentPath" class="mono">—</span>
+              <div class="spacer"></div>
+              <button id="btnPreviewComponent">Preview</button>
+              <button id="btnSaveComponent">Apply</button>
+            </div>
+            <textarea id="componentEditor" spellcheck="false"></textarea>
+            <div id="componentStatus" class="muted">Select a component to edit its JSON.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="panel-themejson" class="panel">
+        <h2>theme.json</h2>
+        <p class="muted">Advanced editor for the theme manifest. Palette and metadata edits made in other tabs can be picked up with <strong>Reload</strong>.</p>
+        <div class="component-editor-head">
+          <span class="mono">theme.json</span>
+          <div class="spacer"></div>
+          <button id="btnFormatThemeJson">Format</button>
+          <button id="btnReloadThemeJson">Reload</button>
+          <button id="btnApplyThemeJson">Apply</button>
+        </div>
+        <textarea id="themeJsonEditor" class="json-editor" spellcheck="false"></textarea>
+        <div id="themeJsonStatus" class="muted">Edit the manifest JSON, then click Apply.</div>
+      </section>
+
+      <section id="panel-assets" class="panel">
+        <h2>Assets</h2>
+        <div class="panel-toolbar">
+          <button id="btnImportAssets">Import images…</button>
+          <button id="btnReplaceAsset" disabled>Replace selected</button>
+          <button id="btnRenameAsset" disabled>Rename…</button>
+          <button id="btnDeleteAsset" disabled>Delete selected</button>
+          <button id="btnDeleteUnusedAssets">Delete unused</button>
+          <input id="assetFilter" type="text" placeholder="Filter assets…">
+          <span id="assetCount" class="muted"></span>
+          <div class="spacer"></div>
+          <span class="muted">Importing a PNG that matches an existing asset name replaces it. You can also drop images onto the grid.</span>
+        </div>
+        <div id="assetInfo" class="asset-info muted">Select an asset to see its size and dimensions.</div>
+        <div id="assetGrid" class="asset-grid"></div>
+      </section>
+
+      <section id="panel-validation" class="panel">
+        <h2>Validation</h2>
+        <div class="panel-toolbar">
+          <button id="btnRunValidation">Run validation</button>
+          <span id="validationSummary" class="muted"></span>
+        </div>
+        <div id="validationResults"></div>
+      </section>
+    </main>
+
+    <aside id="preview-panel">
+      <div class="preview-head">
+        <div class="preview-head-row">
+          <h2>Preview</h2>
+          <button id="btnSavePreview" title="Save the current preview as a PNG">Save PNG</button>
+        </div>
+        <select id="previewComponent"></select>
+      </div>
+      <div id="previewCanvasWrap">
+        <canvas id="previewCanvas"></canvas>
+      </div>
+      <div id="previewControls">
+        <div id="variantRow" class="control-row hidden">
+          <label>Screen</label>
+          <select id="previewVariant"></select>
+        </div>
+        <div id="pageRow" class="control-row hidden">
+          <label>Page</label>
+          <input id="previewPage" type="number" min="0" value="0" step="1">
+          <span id="previewPageCount" class="muted"></span>
+        </div>
+        <div id="frameRow" class="control-row hidden">
+          <label>Frame</label>
+          <input id="previewFrame" type="number" min="0" value="0" step="1">
+          <span id="previewFrameCount" class="muted"></span>
+        </div>
+        <div id="itemRow" class="control-row hidden">
+          <label>Selected item</label>
+          <input id="previewSelectedItem" type="number" min="0" value="0" step="1">
+          <span id="previewItemCount" class="muted"></span>
+        </div>
+        <div class="control-row">
+          <label class="check"><input type="checkbox" id="simulateMode"> Simulate</label>
+          <label class="check"><input type="checkbox" id="editMode"> Edit layout</label>
+          <label class="check"><input type="checkbox" id="snapGrid"> Snap 5px</label>
+          <button id="btnSimBack" disabled title="Go back in the simulated screen stack">◂ Back</button>
+          <label>Zoom
+            <select id="previewZoom">
+              <option value="1">1x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2" selected>2x</option>
+              <option value="3">3x</option>
+              <option value="fit">Fit</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="variablesBox" class="variables hidden">
+        <div class="variables-head">Simulation variables</div>
+        <div id="variableList"></div>
+      </div>
+      <div id="previewHint">Enable <em>Edit layout</em> to drag elements, or <em>Simulate</em> to click through screens.<span id="previewCoords" class="mono"></span></div>
+    </aside>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+
+  <script src="palette.js"></script>
+  <script src="zip.js"></script>
+  <script src="validators.js"></script>
+  <script src="model.js"></script>
+  <script src="preview.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

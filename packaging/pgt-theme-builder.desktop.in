@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Pager Theme Builder
+GenericName=Pager Theme Editor
+Comment=Create and edit themes for the Hak5 WiFi Pineapple Pager
+Exec=__EXEC__
+Icon=__ICON__
+Terminal=false
+Categories=Development;
+Keywords=pager;hak5;wifi;pineapple;theme;builder;
+StartupNotify=true
