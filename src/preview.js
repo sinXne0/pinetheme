@@ -16,6 +16,7 @@ class PreviewRenderer {
     this.hitRegions = [];
     this.lastScreen = null;
     this.variables = {};           // $_VAR -> user-supplied sample value
+    this.hidden = null;            // Set of layer/item objects to skip when drawing
   }
 
   setModel(model) {
@@ -292,6 +293,7 @@ class PreviewRenderer {
   async drawLayers(layers, ox, oy, meta) {
     for (const l of layers || []) {
       if (l._comment) continue;
+      if (this.hidden && this.hidden.has(l)) continue;
       await this.drawLayer(l, ox, oy, meta);
     }
   }
@@ -310,6 +312,7 @@ class PreviewRenderer {
     for (let i = 0; i < (items || []).length; i++) {
       const item = items[i];
       if (item._comment) continue;
+      if (this.hidden && this.hidden.has(item)) continue;
       const ox = item.x || 0;
       const oy = item.y || 0;
       const selected = i === selectedIndex;
@@ -405,6 +408,7 @@ class PreviewRenderer {
 
   async render(componentPath, opts = {}) {
     this.hitRegions = [];
+    this.hidden = opts.hidden || null;
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
     ctx.fillStyle = '#000';

@@ -41,6 +41,14 @@ validation are implemented in plain JavaScript in `src/`.
   1 px (Shift + arrow moves the whole item). Optional **Snap 5px** aligns dragged
   elements to a 5 px grid, and a live coordinate readout shows the pointer
   position on the 480 × 222 canvas.
+- **Layers panel** — a Photoshop-style list of every background layer and menu
+  item (with its unselected/selected layers). Click to select, toggle an eye to
+  hide a layer from the preview (still exported), reorder with ↑/↓, delete with
+  ✕, or add a new layer with **＋ Layer**.
+- **Properties inspector** — edit the selected layer or item precisely: X/Y
+  position, image (with an asset picker), recolor/text palette, text content,
+  text size, and template variable. Selection stays in sync between the canvas
+  and the layers panel.
 - **Undo / redo** — every palette, metadata, layout, component and asset change
   is undoable (up to 80 steps). Use the toolbar buttons or Ctrl+Z / Ctrl+Shift+Z.
 - **Dirty-state protection** — switching themes or closing the window asks
@@ -198,6 +206,8 @@ Useful scripts:
 | Back | Return to the previous simulated screen |
 | Variables | Edit sample values for `$_VAR` template variables |
 | Snap 5px | Align dragged elements to a 5 px grid |
+| Layers | Select, hide, reorder, delete or add layers/items |
+| Properties | Edit X/Y, image, palette, text and size of the selection |
 | Zoom | 1x / 1.5x / 2x / 3x, or **Fit** to scale to the panel |
 | Coordinate readout | Shows the pointer position in canvas pixels |
 | Save PNG | Save the current 480 × 222 preview as a PNG |
@@ -358,6 +368,8 @@ npm run test:interaction
 - preview PNG export writes a valid 480 × 222 PNG
 - dragging moves a layer by exactly the drag delta and persists to the file map
 - arrow-key nudging moves by 1 px
+- the layers panel lists layers/items; selecting, editing X/Y in the inspector,
+  toggling visibility, and deleting a layer all work
 - **Fit** zoom scales the canvas and the coordinate readout reports canvas pixels
 - **Snap 5px** is off by default and aligns dragged elements to the grid
 - image import adds an asset and updates the grid

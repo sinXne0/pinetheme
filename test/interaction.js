@@ -261,6 +261,49 @@ app.whenReady().then(async () => {
       await sleep(250);
     }
 
+    // ---- layers panel + properties inspector ----
+    out.layersBoxVisible = !document.getElementById('layersBox').classList.contains('hidden');
+    out.layerRowCount = document.querySelectorAll('#layerList .layer-row').length;
+    const firstRow = document.querySelector('#layerList .layer-row');
+    if (firstRow) {
+      firstRow.click();
+      await sleep(150);
+      out.propsBoxVisible = !document.getElementById('propsBox').classList.contains('hidden');
+      out.propRowCount = document.querySelectorAll('#propsFields .prop-row').length;
+      out.layerSelected = !!(app.state.selected && app.state.selected.layer);
+
+      // Edit X via the inspector.
+      const xInput = document.querySelector('#propsFields .prop-row input[type="number"]');
+      if (xInput) {
+        const beforeX = (app.state.selected.layer && app.state.selected.layer.x) || 0;
+        xInput.focus();
+        xInput.value = '77';
+        xInput.dispatchEvent(new Event('change'));
+        await sleep(150);
+        out.propXEdited = (app.state.selected.layer && app.state.selected.layer.x) === 77 && 77 !== beforeX;
+      }
+
+      // Visibility toggle.
+      const eye = document.querySelector('#layerList .layer-row.active .eye');
+      if (eye) {
+        eye.click();
+        await sleep(150);
+        out.hiddenCount = app.state.hidden.size;
+        eye.click();
+        await sleep(150);
+        out.hiddenCountRestored = app.state.hidden.size === 0;
+      }
+
+      // Delete a layer (undoable; the theme is reloaded later anyway).
+      const del = document.querySelector('#layerList .layer-row .move button:last-child');
+      if (del) {
+        const beforeRows = document.querySelectorAll('#layerList .layer-row').length;
+        del.click();
+        await sleep(200);
+        out.layerDeleted = document.querySelectorAll('#layerList .layer-row').length < beforeRows;
+      }
+    }
+
     // ---- asset import ----
     const beforeAssets = document.querySelectorAll('#assetGrid .asset-cell').length;
     document.getElementById('btnImportAssets').click();
@@ -830,6 +873,15 @@ app.whenReady().then(async () => {
     result.dragDx === 5 && result.dragDy === 3 &&
     result.nudged === 1 &&
     result.dragPersisted === true &&
+    result.layersBoxVisible === true &&
+    result.layerRowCount > 0 &&
+    result.propsBoxVisible === true &&
+    result.propRowCount > 0 &&
+    result.layerSelected === true &&
+    result.propXEdited === true &&
+    result.hiddenCount === 1 &&
+    result.hiddenCountRestored === true &&
+    result.layerDeleted === true &&
     result.hasImportedAsset === true &&
     result.assetsAfter === result.assetsBefore + 1 &&
     result.validationOk === 1 &&

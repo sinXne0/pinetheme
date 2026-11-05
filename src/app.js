@@ -24,7 +24,8 @@
     drag: null,
     themeJsonDirty: false,
     variables: {},
-    backStack: []
+    backStack: [],
+    hidden: new Set()            // layer/item objects hidden from the preview
   };
 
   // ---- undo / redo --------------------------------------------------------
@@ -1581,7 +1582,8 @@
       variantIndex: state.preview.variantIndex,
       selectedIndex: state.preview.selectedIndex,
       pageIndex: state.preview.pageIndex,
-      frameIndex: state.preview.frameIndex
+      frameIndex: state.preview.frameIndex,
+      hidden: state.hidden
     });
 
     // page / animation-frame controls
@@ -1619,6 +1621,8 @@
 
     drawSelectionOutline();
     renderVariables();
+    renderLayers();
+    renderProperties();
     updateSimBack();
   }
 
@@ -1789,6 +1793,349 @@
     renderPreview();
   }
 
+  // ---- layers panel + properties inspector --------------------------------
+  const nodeIds = new Map();
+  let nodeIdSeq = 0;
+  function idOf(obj) {
+    if (!obj) return 0;
+    if (!nodeIds.has(obj)) nodeIds.set(obj, ++nodeIdSeq);
+    return nodeIds.get(obj);
+  }
+
+  function currentItems(screen) {
+    if (!screen) return [];
+    if (screen.menu_items) return screen.menu_items;
+    if (screen.pages) {
+      const page = screen.pages[state.preview.pageIndex] || screen.pages[0];
+      return page && page.menu_items ? page.menu_items : [];
+    }
+    if (screen.rows) { const flat = []; for (const r of screen.rows) for (const it of r || []) flat.push(it); return flat; }
+    return [];
+  }
+
+  function layerGlyph(layer) {
+    if (layer.image_path) return '🖼';
+    if (layer.toggle_template) return '◉';
+    if (layer.use_template || layer.string_template) return '⧉';
+    if (layer.text != null || layer.variable_name || layer.variable) return 'T';
+    return '·';
+  }
+
+  function layerLabel(layer, prefix) {
+    let t;
+    if (layer.image_path) t = layer.image_path;
+    else if (layer.text != null) t = '“' + layer.text + '”';
+    else if (layer.variable_name) t = layer.variable_name;
+    else if (layer.use_template) t = layer.use_template;
+    else if (layer.toggle_template) t = 'toggle';
+    else if (layer.string_template) t = 'string';
+    else t = 'layer';
+    return (prefix ? prefix + ' · ' : '') + t;
+  }
+
+  function buildLayerNodes(screen) {
+    const nodes = [];
+    if (!screen) return nodes;
+    const bg = screen.background || {};
+    const bgLayers = Array.isArray(bg.layers) ? bg.layers : [];
+    bgLayers.forEach((layer, index) => {
+      nodes.push({ layer, item: null, parent: bgLayers, index, label: layerLabel(layer, 'bg') });
+    });
+    const items = currentItems(screen);
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      nodes.push({ layer: null, item, parent: items, index: i, label: 'item · ' + (item.id || ('#' + i)) });
+      const layers = Array.isArray(item.layers) ? item.layers : [];
+      const selLayers = Array.isArray(item.selected_layers) ? item.selected_layers : [];
+      layers.forEach((layer, index) => nodes.push({ layer, item, parent: layers, index, label: layerLabel(layer, '') }));
+      selLayers.forEach((layer, index) => nodes.push({ layer, item, parent: selLayers, index, label: layerLabel(layer, 'sel') }));
+    }
+    return nodes;
+  }
+
+  let currentLayerNodes = [];
+  let lastLayerSig = null;
+
+  function renderLayers() {
+    const box = $('layersBox');
+    const list = $('layerList');
+    if (!box || !list) return;
+    const nodes = buildLayerNodes(state.renderer.lastScreen);
+    const sig = nodes.map((n) => (n.layer ? 'L' + idOf(n.layer) : 'I' + idOf(n.item))).join(',');
+    if (sig !== lastLayerSig) {
+      lastLayerSig = sig;
+      currentLayerNodes = nodes;
+      list.innerHTML = '';
+      for (const node of nodes) {
+        const li = document.createElement('li');
+        li.className = 'layer-row';
+
+        const eye = document.createElement('button');
+        eye.className = 'mini eye';
+        eye.title = 'Show / hide in preview (still exported)';
+        eye.textContent = state.hidden.has(node.layer || node.item) ? '▫' : '▮';
+        eye.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const key = node.layer || node.item;
+          if (state.hidden.has(key)) state.hidden.delete(key); else state.hidden.add(key);
+          renderPreview();
+        });
+
+        const glyph = document.createElement('span');
+        glyph.className = 'glyph';
+        glyph.textContent = node.layer ? layerGlyph(node.layer) : '☰';
+
+        const label = document.createElement('span');
+        label.className = 'lname';
+        label.textContent = node.label;
+
+        li.appendChild(eye);
+        li.appendChild(glyph);
+        li.appendChild(label);
+
+        const move = document.createElement('span');
+        move.className = 'move';
+        const up = document.createElement('button');
+        up.className = 'mini';
+        up.textContent = '↑';
+        up.title = 'Move up';
+        up.addEventListener('click', (e) => { e.stopPropagation(); moveLayerNode(node, -1); });
+        const down = document.createElement('button');
+        down.className = 'mini';
+        down.textContent = '↓';
+        down.title = 'Move down';
+        down.addEventListener('click', (e) => { e.stopPropagation(); moveLayerNode(node, 1); });
+        const del = document.createElement('button');
+        del.className = 'mini';
+        del.textContent = '✕';
+        del.title = 'Delete';
+        del.addEventListener('click', (e) => { e.stopPropagation(); deleteLayerNode(node); });
+        move.appendChild(up);
+        move.appendChild(down);
+        move.appendChild(del);
+        li.appendChild(move);
+
+        li.addEventListener('click', () => {
+          state.selected = { layer: node.layer, item: node.item };
+          renderLayers();
+          renderProperties();
+          renderPreview();
+        });
+
+        list.appendChild(li);
+      }
+    }
+    box.classList.toggle('hidden', nodes.length === 0);
+    // Refresh active + eye state without rebuilding (preserves scroll/focus).
+    const lis = list.children;
+    for (let i = 0; i < currentLayerNodes.length && i < lis.length; i++) {
+      const node = currentLayerNodes[i];
+      const li = lis[i];
+      const isSel = state.selected && ((node.layer && state.selected.layer === node.layer) || (node.item && state.selected.item === node.item));
+      li.classList.toggle('active', !!isSel);
+      const eye = li.querySelector('.eye');
+      if (eye) eye.textContent = state.hidden.has(node.layer || node.item) ? '▫' : '▮';
+    }
+  }
+
+  function moveLayerNode(node, dir) {
+    if (!node.parent) return;
+    const arr = node.parent;
+    const j = node.index + dir;
+    if (j < 0 || j >= arr.length) return;
+    history.push();
+    const tmp = arr[node.index];
+    arr[node.index] = arr[j];
+    arr[j] = tmp;
+    markDirty();
+    renderPreview();
+  }
+
+  function deleteLayerNode(node) {
+    history.push();
+    if (node.layer && node.parent) {
+      node.parent.splice(node.index, 1);
+      if (state.selected && state.selected.layer === node.layer) state.selected = null;
+    } else if (node.item && node.parent) {
+      node.parent.splice(node.index, 1);
+      if (state.selected && state.selected.item === node.item) state.selected = null;
+    } else {
+      history.undoStack.pop();
+      return;
+    }
+    markDirty();
+    renderPreview();
+    toast('Deleted ' + (node.layer ? 'layer' : 'item'));
+  }
+
+  function addLayer() {
+    const screen = state.renderer.lastScreen;
+    if (!screen) { toast('Select a component to add a layer', true); return; }
+    const assets = state.model.listAssets();
+    const palette = Object.keys(state.model.getPalette());
+    const newLayer = assets.length
+      ? { image_path: assets[0], x: 0, y: 0 }
+      : { text: 'New text', x: 0, y: 0, text_color_palette: palette[0] || 'soft_white' };
+    history.push();
+    const sel = state.selected;
+    if (sel && sel.item) {
+      if (!Array.isArray(sel.item.layers)) sel.item.layers = [];
+      sel.item.layers.push(newLayer);
+    } else {
+      if (!screen.background) screen.background = {};
+      if (!Array.isArray(screen.background.layers)) screen.background.layers = [];
+      screen.background.layers.push(newLayer);
+    }
+    state.selected = { layer: newLayer, item: sel && sel.item ? sel.item : null };
+    markDirty();
+    renderPreview();
+    toast('Added layer');
+  }
+
+  // ---- properties inspector -----------------------------------------------
+  let lastPropsKey = null;
+  let propBindings = [];
+
+  function propRow(fields, labelText) {
+    const row = document.createElement('div');
+    row.className = 'prop-row';
+    const label = document.createElement('label');
+    label.textContent = labelText;
+    row.appendChild(label);
+    fields.appendChild(row);
+    return row;
+  }
+
+  function bindProp(el, get) {
+    propBindings.push({ el, get });
+  }
+
+  function propNumber(fields, labelText, obj, key) {
+    const row = propRow(fields, labelText);
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = '1';
+    input.value = obj[key] || 0;
+    input.addEventListener('focus', () => history.push());
+    input.addEventListener('change', () => {
+      obj[key] = Math.round(parseFloat(input.value) || 0);
+      markDirty();
+      renderPreview();
+    });
+    row.appendChild(input);
+    bindProp(input, () => obj[key] || 0);
+  }
+
+  function propText(fields, labelText, obj, key) {
+    const row = propRow(fields, labelText);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = obj[key] != null ? obj[key] : '';
+    input.addEventListener('focus', () => history.push());
+    input.addEventListener('change', () => {
+      if (input.value === '') delete obj[key]; else obj[key] = input.value;
+      markDirty();
+      renderPreview();
+    });
+    row.appendChild(input);
+    bindProp(input, () => obj[key] != null ? obj[key] : '');
+  }
+
+  function propSelect(fields, labelText, obj, key, options) {
+    const row = propRow(fields, labelText);
+    const sel = document.createElement('select');
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = '—';
+    sel.appendChild(empty);
+    for (const o of options) {
+      const opt = document.createElement('option');
+      opt.value = o;
+      opt.textContent = o;
+      sel.appendChild(opt);
+    }
+    sel.value = obj[key] || '';
+    sel.addEventListener('focus', () => history.push());
+    sel.addEventListener('change', () => {
+      if (sel.value === '') delete obj[key]; else obj[key] = sel.value;
+      markDirty();
+      renderPreview();
+    });
+    row.appendChild(sel);
+    bindProp(sel, () => obj[key] || '');
+  }
+
+  function buildLayerProps(fields, layer) {
+    propNumber(fields, 'X', layer, 'x');
+    propNumber(fields, 'Y', layer, 'y');
+    if (layer.image_path || (!layer.text && !layer.variable_name && !layer.use_template && !layer.toggle_template)) {
+      propSelect(fields, 'Image', layer, 'image_path', state.model.listAssets());
+      propSelect(fields, 'Recolor', layer, 'recolor_palette', Object.keys(state.model.getPalette()).sort());
+    }
+    if (layer.text != null || layer.variable_name || layer.variable || layer.use_template === 'string' || layer.string_template) {
+      propText(fields, 'Text', layer, 'text');
+      propSelect(fields, 'Text color', layer, 'text_color_palette', Object.keys(state.model.getPalette()).sort());
+      const sizeRow = propRow(fields, 'Size');
+      const sizeSel = document.createElement('select');
+      for (const s of ['small', 'medium', 'large']) {
+        const o = document.createElement('option');
+        o.value = s;
+        o.textContent = s;
+        sizeSel.appendChild(o);
+      }
+      sizeSel.value = layer.text_size || 'medium';
+      sizeSel.addEventListener('focus', () => history.push());
+      sizeSel.addEventListener('change', () => {
+        layer.text_size = sizeSel.value;
+        markDirty();
+        renderPreview();
+      });
+      sizeRow.appendChild(sizeSel);
+      bindProp(sizeSel, () => layer.text_size || 'medium');
+    }
+    if (layer.variable_name || layer.variable) {
+      propText(fields, 'Variable', layer, 'variable_name');
+    }
+  }
+
+  function buildItemProps(fields, item) {
+    propNumber(fields, 'X', item, 'x');
+    propNumber(fields, 'Y', item, 'y');
+    const idRow = propRow(fields, 'ID');
+    const idSpan = document.createElement('span');
+    idSpan.className = 'muted mono';
+    idSpan.textContent = item.id || '—';
+    idRow.appendChild(idSpan);
+    const targetRow = propRow(fields, 'Target');
+    const targetSpan = document.createElement('span');
+    targetSpan.className = 'muted mono';
+    targetSpan.textContent = item.target || '—';
+    targetRow.appendChild(targetSpan);
+  }
+
+  function renderProperties() {
+    const box = $('propsBox');
+    const fields = $('propsFields');
+    if (!box || !fields) return;
+    const sel = state.selected;
+    const target = sel && (sel.layer || sel.item);
+    const key = target ? (sel.layer ? 'L' + idOf(sel.layer) : 'I' + idOf(sel.item)) : 'none';
+    box.classList.toggle('hidden', !target);
+    if (key === lastPropsKey) {
+      for (const b of propBindings) {
+        if (document.activeElement === b.el) continue;
+        b.el.value = b.get();
+      }
+      return;
+    }
+    lastPropsKey = key;
+    propBindings = [];
+    fields.innerHTML = '';
+    if (!target) return;
+    if (sel.layer) buildLayerProps(fields, sel.layer);
+    else if (sel.item) buildItemProps(fields, sel.item);
+  }
+
   function drawSelectionOutline() {
     const r = state.renderer;
     const sel = state.selected;
@@ -1858,7 +2205,13 @@
     cv.addEventListener('mousedown', (e) => {
       const p = canvasPoint(e);
       const region = hitTest(p.x, p.y);
-      if (!region) { state.selected = null; drawSelectionOutline(); return; }
+      if (!region) {
+        state.selected = null;
+        drawSelectionOutline();
+        renderLayers();
+        renderProperties();
+        return;
+      }
       if ($('editMode').checked) {
         history.push();
         state.selected = { layer: region.layer, item: region.item };
@@ -1870,6 +2223,8 @@
           origIY: region.item ? (region.item.y || 0) : 0
         };
         drawSelectionOutline();
+        renderLayers();
+        renderProperties();
       } else if ($('simulateMode').checked) {
         simulateClick(region);
       } else if (region.itemIndex >= 0) {
@@ -1965,6 +2320,7 @@
       renderPreview();
     });
     $('btnSimBack').addEventListener('click', popBack);
+    $('btnAddLayer').addEventListener('click', addLayer);
   }
 
   function bindKeyboardNudge() {
