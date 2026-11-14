@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pgt — launch the Pager Theme Builder.
+# pgt — launch PineTheme Studio.
 set -euo pipefail
 
 APP_DIR="${PGT_APP_DIR:-__APP_DIR__}"

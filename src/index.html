@@ -4,99 +4,249 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
-  <title>Pager Theme Builder</title>
+        content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-src 'self';">
+  <title>PineTheme Studio — WiFi Pineapple Pager Theme Builder</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header id="toolbar">
-    <div class="brand">⌁ <strong>Pager Theme Builder</strong><span class="cursor">▌</span></div>
+    <div class="brand">
+      <span class="brand-mark">⌁</span>
+      <span class="brand-text">PineTheme <em>Studio</em></span>
+      <span class="cursor">▌</span>
+    </div>
     <div id="projectInfo">
       <span id="projectName">No theme loaded</span>
       <span id="dirtyBadge" class="hidden" title="Unsaved changes">●</span>
+      <span id="frameworkBadge" class="pill" title="theme_framework_version">fw —</span>
     </div>
     <div class="toolbar-actions">
-      <button id="btnNew" title="Clone the bundled reference theme">New theme</button>
-      <button id="btnNewBlank" title="Start with only theme.json and a palette">New blank</button>
+      <button id="btnNew" title="Clone the bundled reference theme">New</button>
+      <button id="btnNewBlank" title="Start with only theme.json and a palette">Blank</button>
       <button id="btnDuplicate" title="Duplicate the current theme as a new copy">Duplicate</button>
-      <button id="btnOpen">Open folder…</button>
-      <button id="btnOpenZip">Open ZIP…</button>
+      <button id="btnOpen" title="Open a theme folder">Open</button>
+      <button id="btnOpenZip" title="Open a theme ZIP">ZIP</button>
       <span class="sep"></span>
       <button id="btnUndo" disabled title="Undo (Ctrl+Z)">↶</button>
       <button id="btnRedo" disabled title="Redo (Ctrl+Shift+Z)">↷</button>
       <span class="sep"></span>
-      <button id="btnSave" disabled>Save</button>
-      <button id="btnSaveAs" disabled>Save as…</button>
-      <button id="btnExport" disabled>Export ZIP</button>
-      <span class="sep"></span>
-      <button id="btnValidate" disabled>Validate</button>
+      <button id="btnCommand" class="primary-soft" title="Command palette (Ctrl+K)">⌘K</button>
+      <button id="btnSave" disabled title="Save (Ctrl+S)">Save</button>
+      <button id="btnSaveAs" disabled title="Save as (Ctrl+Shift+S)">Save as…</button>
+      <button id="btnExport" disabled title="Export ZIP (Ctrl+E)">Export</button>
+      <button id="btnValidate" disabled title="Run validation">Validate</button>
     </div>
   </header>
 
   <div id="app">
-    <nav id="sidebar">
-      <button class="nav-item active" data-tab="metadata">Metadata</button>
-      <button class="nav-item" data-tab="colors">Colors</button>
-      <button class="nav-item" data-tab="components">Components</button>
-      <button class="nav-item" data-tab="themejson">Theme JSON</button>
-      <button class="nav-item" data-tab="assets">Assets</button>
-      <button class="nav-item" data-tab="validation">Validation<span id="validationBadge" class="nav-badge hidden"></span></button>
+    <nav id="sidebar" aria-label="Studio sections">
+      <div class="nav-group">Studio</div>
+      <button class="nav-item" data-tab="design"><span class="ico">◈</span><span>Overview</span></button>
+      <button class="nav-item" data-tab="components"><span class="ico">▤</span><span>Components</span></button>
+      <button class="nav-item" data-tab="colors"><span class="ico">◐</span><span>Palette</span></button>
+      <button class="nav-item" data-tab="assets"><span class="ico">🖼</span><span>Assets</span></button>
+      <button class="nav-item" data-tab="imagelab"><span class="ico">✦</span><span>Image Lab</span></button>
+      <div class="nav-group">Theme</div>
+      <button class="nav-item" data-tab="themejson"><span class="ico">⌘</span><span>Manifest</span></button>
+      <button class="nav-item" data-tab="metadata"><span class="ico">✎</span><span>Metadata</span></button>
+      <button class="nav-item" data-tab="simulator"><span class="ico">▷</span><span>Simulator</span></button>
+      <button class="nav-item" data-tab="library"><span class="ico">☆</span><span>Themes</span></button>
+      <button class="nav-item" data-tab="validation"><span class="ico">✓</span><span>Validate</span><span id="validationBadge" class="nav-badge hidden"></span></button>
+      <div class="spacer"></div>
+      <div class="nav-group">View</div>
+      <button id="btnFocusPreview" class="nav-item nav-action"><span class="ico">⛶</span><span>Focus preview</span></button>
+      <button id="btnToggleDock" class="nav-item nav-action"><span class="ico">▥</span><span>Toggle dock</span></button>
+      <div class="nav-footer">
+        <div class="muted" id="navThemeSize">— files</div>
+        <div class="muted">Pager · 480×222</div>
+      </div>
     </nav>
 
     <main id="content">
-      <section id="panel-metadata" class="panel active">
-        <h2>Theme metadata</h2>
-        <p class="muted">Stored in <code>README.md</code> and the top of <code>theme.json</code>.</p>
-        <div class="field">
-          <label for="metaName">Theme name</label>
-          <input id="metaName" type="text" placeholder="My Theme">
+      <!-- ================= OVERVIEW ================= -->
+      <section id="panel-design" class="panel active">
+        <div class="panel-head">
+          <div>
+            <h2>Overview</h2>
+            <p class="muted">An all-in-one workspace for the WiFi Pineapple Pager theme system (framework 0.9, theme_version 2.0.0).</p>
+          </div>
+          <div class="panel-head-actions">
+            <button id="btnOverviewSimulate">Simulate theme</button>
+            <button id="btnOverviewExport">Export ZIP</button>
+          </div>
         </div>
-        <div class="field">
-          <label for="metaAuthor">Author</label>
-          <input id="metaAuthor" type="text" placeholder="you">
+        <div id="overviewStats" class="stat-grid"></div>
+        <div class="overview-columns">
+          <div class="card">
+            <div class="card-head"><h3>Quick actions</h3></div>
+            <div class="quick-grid">
+              <button data-quick="new-component"><span>＋</span>New component</button>
+              <button data-quick="templates"><span>⧉</span>Template gallery</button>
+              <button data-quick="palette-preset"><span>◐</span>Apply palette preset</button>
+              <button data-quick="import-assets"><span>🖼</span>Import assets</button>
+              <button data-quick="image-lab"><span>✦</span>Open Image Lab</button>
+              <button data-quick="simulate"><span>▷</span>Open simulator</button>
+              <button data-quick="focus-preview"><span>⛶</span>Focus preview</button>
+              <button data-quick="validate"><span>✓</span>Run validation</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Theme health</h3><span id="healthBadge" class="pill">—</span></div>
+            <div id="healthList" class="health-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>2.0.0 readiness</h3><span id="compatBadge" class="pill">—</span></div>
+            <div id="compatList" class="health-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Palette</h3><button id="btnOverviewPalette" class="mini">Edit palette</button></div>
+            <div id="overviewPalette" class="mini-palette"></div>
+          </div>
         </div>
-        <div class="field-row">
+        <div class="card">
+          <div class="card-head">
+            <h3>Screen map</h3>
+            <div class="spacer"></div>
+            <input id="screenMapFilter" type="text" placeholder="Filter screens…">
+          </div>
+          <div id="screenMap" class="screen-map"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Keyboard shortcuts</h3></div>
+          <div class="shortcut-grid">
+            <div><kbd>Ctrl</kbd>+<kbd>K</kbd><span>Command palette</span></div>
+            <div><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save theme</span></div>
+            <div><kbd>Ctrl</kbd>+<kbd>Z</kbd><span>Undo</span></div>
+            <div><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd><span>Redo</span></div>
+            <div><kbd>Space</kbd>+drag<span>Pan preview</span></div>
+            <div><kbd>Wheel</kbd><span>Zoom preview (Ctrl)</span></div>
+            <div><kbd>0</kbd><span>Fit preview</span></div>
+            <div><kbd>1</kbd>/<kbd>2</kbd><span>100% / 200%</span></div>
+            <div><kbd>F</kbd><span>Focus preview</span></div>
+            <div><kbd>Esc</kbd><span>Close modal / focus</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= METADATA ================= -->
+      <section id="panel-metadata" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Theme metadata</h2>
+            <p class="muted">Stored in <code>README.md</code> and the top of <code>theme.json</code>. Target: 2.0.0 themes.</p>
+          </div>
+        </div>
+        <div class="form-grid">
           <div class="field">
-            <label for="metaVersion">Version</label>
-            <input id="metaVersion" type="text" placeholder="1.0.0">
+            <label for="metaName">Theme name</label>
+            <input id="metaName" type="text" placeholder="My Theme">
+          </div>
+          <div class="field">
+            <label for="metaAuthor">Author</label>
+            <input id="metaAuthor" type="text" placeholder="you">
+          </div>
+          <div class="field">
+            <label for="metaVersion">Theme version</label>
+            <input id="metaVersion" type="text" placeholder="2.0.0">
           </div>
           <div class="field">
             <label for="metaFramework">Theme framework version</label>
             <input id="metaFramework" type="text" placeholder="0.9">
           </div>
-        </div>
-        <div class="field">
-          <label for="metaDescription">Description</label>
-          <textarea id="metaDescription" rows="4" placeholder="Describe your theme"></textarea>
-        </div>
-        <div class="field">
-          <label>Folder name (slug)</label>
-          <div class="row-inline">
-            <input id="metaDirName" type="text" placeholder="my-theme">
-            <button id="btnSlugify" title="Generate slug from name">↻</button>
+          <div class="field span-2">
+            <label for="metaDescription">Description</label>
+            <textarea id="metaDescription" rows="4" placeholder="Describe your theme"></textarea>
           </div>
+          <div class="field span-2">
+            <label>Folder name (slug)</label>
+            <div class="row-inline">
+              <input id="metaDirName" type="text" placeholder="my-theme">
+              <button id="btnSlugify" title="Generate slug from name">↻</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Generated README.md</h3><div class="spacer"></div><button id="btnCopyReadme" class="mini">Copy</button></div>
+          <pre id="readmePreview" class="code-block"></pre>
         </div>
       </section>
 
+      <!-- ================= PALETTE ================= -->
       <section id="panel-colors" class="panel">
-        <h2>Color palette</h2>
+        <div class="panel-head">
+          <div>
+            <h2>Palette</h2>
+            <p class="muted">Colors are referenced by name from components. Editing here updates the preview live.</p>
+          </div>
+          <div class="panel-head-actions">
+            <input id="paletteFilter" type="text" placeholder="Filter colors…">
+            <button id="btnSortPalette" title="Sort by luminance">Sort</button>
+          </div>
+        </div>
         <div class="panel-toolbar">
-          <span class="muted">Colors referenced by components use these names.</span>
-          <div class="spacer"></div>
           <input id="newColorName" type="text" placeholder="new_color">
           <button id="btnAddColor">Add color</button>
           <button id="btnImportPalette">Import palette…</button>
           <button id="btnExportPalette">Export palette…</button>
           <button id="btnResetPalette">Reset to default</button>
+          <span class="spacer"></span>
+          <span id="paletteCount" class="muted"></span>
         </div>
         <div id="colorGrid" class="color-grid"></div>
+        <div class="overview-columns">
+          <div class="card">
+            <div class="card-head"><h3>Contrast checker</h3></div>
+            <div class="inline-controls">
+              <label>Text <select id="contrastFg"></select></label>
+              <label>Background <select id="contrastBg"></select></label>
+            </div>
+            <div id="contrastPreview" class="contrast-preview">Sample text</div>
+            <div id="contrastResult" class="muted"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Harmony generator</h3></div>
+            <div class="inline-controls">
+              <label>Base <select id="harmonyBase"></select></label>
+              <label>Scheme
+                <select id="harmonyScheme">
+                  <option value="complementary">Complementary</option>
+                  <option value="split">Split complementary</option>
+                  <option value="analogous">Analogous</option>
+                  <option value="triadic">Triadic</option>
+                  <option value="tetradic">Tetradic</option>
+                  <option value="monochrome">Monochrome</option>
+                  <option value="shades">Shades</option>
+                </select>
+              </label>
+            </div>
+            <div id="harmonyPreview" class="mini-palette"></div>
+            <button id="btnApplyHarmony" class="mini">Add generated colors</button>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Extract from image</h3></div>
+            <p class="muted">Pull a palette from any screenshot or reference image.</p>
+            <input id="paletteExtractFile" type="file" accept="image/*" hidden>
+            <button id="btnExtractPalette">Choose image…</button>
+            <div id="extractPreview" class="mini-palette"></div>
+            <button id="btnApplyExtracted" class="mini" disabled>Add extracted colors</button>
+          </div>
+        </div>
       </section>
 
+      <!-- ================= COMPONENTS ================= -->
       <section id="panel-components" class="panel">
-        <h2>Components</h2>
+        <div class="panel-head">
+          <div>
+            <h2>Components</h2>
+            <p class="muted">Edit any 2.0.0 component. Use the form for common fields or drop into raw JSON.</p>
+          </div>
+          <div class="panel-head-actions">
+            <button id="btnComponentTemplates" class="primary-soft">Template gallery</button>
+          </div>
+        </div>
         <div class="split">
           <div class="split-left">
-            <input id="componentFilter" type="text" placeholder="Filter…">
+            <input id="componentFilter" type="text" placeholder="Filter components…">
             <div class="component-actions">
               <button id="btnNewComponent" title="Create a component">＋ New</button>
               <button id="btnDuplicateComponent" disabled title="Duplicate the selected component">Duplicate</button>
@@ -110,19 +260,32 @@
           <div class="split-right">
             <div class="component-editor-head">
               <span id="componentPath" class="mono">—</span>
+              <span id="componentTypeBadge" class="pill hidden"></span>
               <div class="spacer"></div>
+              <button id="btnComponentForm" class="mini active">Form</button>
+              <button id="btnComponentJson" class="mini">JSON</button>
               <button id="btnPreviewComponent">Preview</button>
               <button id="btnSaveComponent">Apply</button>
             </div>
-            <textarea id="componentEditor" spellcheck="false"></textarea>
-            <div id="componentStatus" class="muted">Select a component to edit its JSON.</div>
+            <div id="componentForm" class="component-form"></div>
+            <textarea id="componentEditor" spellcheck="false" class="json-editor hidden"></textarea>
+            <div id="componentStatus" class="muted">Select a component to edit it.</div>
           </div>
         </div>
       </section>
 
+      <!-- ================= MANIFEST ================= -->
       <section id="panel-themejson" class="panel">
-        <h2>theme.json</h2>
-        <p class="muted">Advanced editor for the theme manifest. Palette and metadata edits made in other tabs can be picked up with <strong>Reload</strong>.</p>
+        <div class="panel-head">
+          <div>
+            <h2>Manifest</h2>
+            <p class="muted">theme.json is the wiring diagram for every surface. Edit by section, or use raw JSON.</p>
+          </div>
+          <div class="panel-head-actions">
+            <button id="btnManifestForm" class="mini active">Sections</button>
+            <button id="btnManifestJson" class="mini">JSON</button>
+          </div>
+        </div>
         <div class="component-editor-head">
           <span class="mono">theme.json</span>
           <div class="spacer"></div>
@@ -130,49 +293,287 @@
           <button id="btnReloadThemeJson">Reload</button>
           <button id="btnApplyThemeJson">Apply</button>
         </div>
-        <textarea id="themeJsonEditor" class="json-editor" spellcheck="false"></textarea>
-        <div id="themeJsonStatus" class="muted">Edit the manifest JSON, then click Apply.</div>
+        <div id="manifestForm" class="manifest-form"></div>
+        <textarea id="themeJsonEditor" class="json-editor hidden" spellcheck="false"></textarea>
+        <div id="themeJsonStatus" class="muted">Edit the manifest, then click Apply.</div>
       </section>
 
+      <!-- ================= ASSETS ================= -->
       <section id="panel-assets" class="panel">
-        <h2>Assets</h2>
+        <div class="panel-head">
+          <div>
+            <h2>Assets</h2>
+            <p class="muted">Every image referenced by the theme. Hover for details; open any asset in Image Lab.</p>
+          </div>
+          <div class="panel-head-actions">
+            <input id="assetFilter" type="text" placeholder="Filter assets…">
+            <select id="assetSort">
+              <option value="path">Sort: path</option>
+              <option value="size">Sort: size</option>
+              <option value="usage">Sort: usage</option>
+              <option value="dims">Sort: dimensions</option>
+            </select>
+          </div>
+        </div>
         <div class="panel-toolbar">
           <button id="btnImportAssets">Import images…</button>
           <button id="btnReplaceAsset" disabled>Replace selected</button>
           <button id="btnRenameAsset" disabled>Rename…</button>
           <button id="btnDeleteAsset" disabled>Delete selected</button>
           <button id="btnDeleteUnusedAssets">Delete unused</button>
-          <input id="assetFilter" type="text" placeholder="Filter assets…">
+          <button id="btnAssetImageLab" disabled>Open in Image Lab</button>
+          <button id="btnAssetUsage" disabled>Find usages</button>
           <span id="assetCount" class="muted"></span>
-          <div class="spacer"></div>
-          <span class="muted">Importing a PNG that matches an existing asset name replaces it. You can also drop images onto the grid.</span>
         </div>
-        <div id="assetInfo" class="asset-info muted">Select an asset to see its size and dimensions.</div>
-        <div id="assetGrid" class="asset-grid"></div>
+        <div id="assetInfo" class="asset-info muted">Select an asset to see its size, dimensions and usage.</div>
+        <div class="asset-split">
+          <div id="assetGrid" class="asset-grid"></div>
+          <aside id="assetDetail" class="card asset-detail">
+            <div class="card-head"><h3>Asset inspector</h3></div>
+            <div id="assetDetailBody" class="muted">Select an asset.</div>
+          </aside>
+        </div>
       </section>
 
-      <section id="panel-validation" class="panel">
-        <h2>Validation</h2>
+      <!-- ================= IMAGE LAB ================= -->
+      <section id="panel-imagelab" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Image Lab</h2>
+            <p class="muted">Crop, grade, dither, quantize and export Pager-ready assets. All offline, all local.</p>
+          </div>
+          <div class="panel-head-actions">
+            <button id="labAdvanced" title="Open the vendored Toast UI advanced editor">Advanced editor…</button>
+          </div>
+        </div>
         <div class="panel-toolbar">
-          <button id="btnRunValidation">Run validation</button>
+          <select id="labAsset" class="wide"></select>
+          <button id="labImport">Import…</button>
+          <button id="labExport">Export PNG</button>
+          <button id="labApply" class="primary-soft">Apply to asset</button>
+          <button id="labSaveAs">Save as new…</button>
+          <button id="labUndo">Undo</button>
+          <button id="labReset">Reset</button>
+          <span id="labDims" class="pill">—</span>
+        </div>
+        <div class="lab-layout">
+          <div class="lab-main">
+            <div id="labStage" class="lab-stage">
+              <canvas id="labCanvas"></canvas>
+              <div id="labEmpty" class="lab-empty">
+                <div class="lab-empty-glyph">✦</div>
+                <div>Choose an asset above or import an image to start.</div>
+                <div class="muted">Tip: use Pagerize → dither + palette remap for crisp 1-bit icons.</div>
+              </div>
+              <div id="labBadge" class="lab-badge">PREVIEW</div>
+            </div>
+            <div class="lab-status">
+              <span id="labInfo" class="muted"></span>
+              <span id="labZoomInfo" class="muted"></span>
+            </div>
+          </div>
+          <aside class="lab-controls">
+            <div class="lab-section">
+              <h3>Transform</h3>
+              <div class="lab-row"><label>Preset</label><select id="labPreset"></select></div>
+              <div class="lab-row"><label>Size</label><input id="labWidth" type="number" min="1"> <span class="muted">×</span> <input id="labHeight" type="number" min="1"> <label class="check tiny"><input id="labLock" type="checkbox" checked> lock</label></div>
+              <div class="lab-row"><label>Fit</label><select id="labFitMode"><option value="contain">Contain</option><option value="cover">Cover / crop</option><option value="stretch">Stretch</option><option value="none">None</option></select></div>
+              <div class="lab-row"><label>Crop</label><input id="labCropX" type="number" min="0" placeholder="x"><input id="labCropY" type="number" min="0" placeholder="y"><input id="labCropW" type="number" min="1" placeholder="w"><input id="labCropH" type="number" min="1" placeholder="h"><button id="labApplyCrop" class="mini">Crop</button><button id="labResetCrop" class="mini">Reset</button></div>
+              <div class="lab-row lab-buttons">
+                <button id="labRotate">Rotate 90°</button>
+                <button id="labFlipH">Flip H</button>
+                <button id="labFlipV">Flip V</button>
+                <button id="labTrim">Trim alpha</button>
+              </div>
+            </div>
+            <div class="lab-section">
+              <h3>Color</h3>
+              <div class="lab-slider"><label>Brightness <span id="labBrightnessVal"></span></label><input id="labBrightness" type="range" min="-100" max="100" value="0"></div>
+              <div class="lab-slider"><label>Contrast</label><input id="labContrast" type="range" min="-100" max="100" value="0"></div>
+              <div class="lab-slider"><label>Saturation</label><input id="labSaturation" type="range" min="-100" max="100" value="0"></div>
+              <div class="lab-slider"><label>Hue</label><input id="labHue" type="range" min="-180" max="180" value="0"></div>
+              <div class="lab-slider"><label>Gamma</label><input id="labGamma" type="range" min="0.1" max="3" step="0.05" value="1"></div>
+              <div class="lab-slider"><label>Alpha cutoff</label><input id="labAlphaCutoff" type="range" min="0" max="254" value="8"></div>
+              <div class="lab-row lab-buttons">
+                <button id="labInvert">Invert</button>
+                <button id="labGray">Grayscale</button>
+              </div>
+            </div>
+            <div class="lab-section">
+              <h3>Pagerize</h3>
+              <div class="lab-row"><label>Mode</label>
+                <select id="labMode">
+                  <option value="none">None</option>
+                  <option value="threshold">Threshold (1-bit)</option>
+                  <option value="dither-fs">Dither · Floyd–Steinberg</option>
+                  <option value="dither-atkinson">Dither · Atkinson</option>
+                  <option value="dither-bayer4">Dither · Bayer 4×4</option>
+                  <option value="dither-bayer8">Dither · Bayer 8×8</option>
+                  <option value="palette">Palette remap</option>
+                  <option value="palette-dither">Palette + Bayer dither</option>
+                </select>
+              </div>
+              <div class="lab-slider"><label>Threshold</label><input id="labThreshold" type="range" min="0" max="255" value="128"></div>
+              <div class="lab-row"><label>Dark</label><select id="labDark"></select><label>Light</label><select id="labLight"></select></div>
+              <div class="lab-row"><label>Palette</label><select id="labPaletteMode"></select></div>
+              <div class="lab-row"><label class="check"><input id="labFlatten" type="checkbox"> Flatten background</label><input id="labBgColor" type="color" value="#000000"></div>
+            </div>
+            <div class="lab-section">
+              <h3>Effects</h3>
+              <div class="lab-slider"><label>Outline</label><input id="labOutline" type="range" min="0" max="8" value="0"></div>
+              <div class="lab-row"><label>Color</label><input id="labOutlineColor" type="color" value="#000000"></div>
+              <div class="lab-slider"><label>Shadow blur</label><input id="labShadow" type="range" min="0" max="20" value="0"></div>
+              <div class="lab-row"><label>Offset</label><input id="labShadowX" type="number" value="2"> <input id="labShadowY" type="number" value="2"> <input id="labShadowColor" type="color" value="#000000"></div>
+              <div class="lab-slider"><label>Tint</label><input id="labTint" type="range" min="0" max="100" value="0"></div>
+              <div class="lab-row"><label>Color</label><input id="labTintColor" type="color" value="#ffffff"></div>
+            </div>
+            <div class="lab-section">
+              <h3>Preview</h3>
+              <div class="lab-row"><label>Zoom</label>
+                <select id="labZoom"><option value="fit">Fit</option><option value="1">100%</option><option value="2">200%</option></select>
+                <label class="check tiny"><input id="labChecker" type="checkbox" checked> checker</label>
+                <button id="labBefore" class="mini">Hold for before</button>
+              </div>
+              <div id="labSummary" class="muted"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= SIMULATOR ================= -->
+      <section id="panel-simulator" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Simulator</h2>
+            <p class="muted">Navigate the theme like the device: D-pad, select/back, status bar states and variables.</p>
+          </div>
+          <div class="panel-head-actions">
+            <select id="simComponent" class="wide"></select>
+            <button id="simHome">Home</button>
+          </div>
+        </div>
+        <div class="sim-layout">
+          <div class="sim-device">
+            <div class="sim-screen-wrap">
+              <canvas id="simCanvas"></canvas>
+            </div>
+            <div class="sim-dpad">
+              <button class="dpad up" data-sim="up">▲</button>
+              <button class="dpad left" data-sim="left">◀</button>
+              <button class="dpad center" data-sim="a">A</button>
+              <button class="dpad right" data-sim="right">▶</button>
+              <button class="dpad down" data-sim="down">▼</button>
+              <button class="dpad b" data-sim="b">B</button>
+            </div>
+            <div class="sim-meta">
+              <span id="simScreenName" class="mono">—</span>
+              <span id="simStackInfo" class="muted"></span>
+            </div>
+          </div>
+          <div class="sim-side">
+            <div class="card">
+              <div class="card-head"><h3>Status bar states</h3></div>
+              <div id="simStatusStates" class="muted">Load a screen with a status bar.</div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Variables</h3><div class="spacer"></div><button id="simClearVars" class="mini">Clear</button></div>
+              <div id="simVariables" class="variable-list muted">No variables on this screen.</div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>History</h3></div>
+              <div id="simHistory" class="mini-list"></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Button map</h3></div>
+              <pre id="simButtonMap" class="code-block small">—</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= LIBRARY ================= -->
+      <section id="panel-library" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Themes</h2>
+            <p class="muted">Browse your local theme repository, clone a community theme, or open recent work.</p>
+          </div>
+          <div class="panel-head-actions">
+            <input id="libraryFilter" type="text" placeholder="Filter themes…">
+            <button id="btnPickRepo">Open themes repo…</button>
+            <button id="btnRefreshRepo">Refresh</button>
+          </div>
+        </div>
+        <div id="libraryPath" class="muted">No repository selected.</div>
+        <div id="libraryGrid" class="library-grid"></div>
+        <div class="card">
+          <div class="card-head"><h3>Recent themes</h3><div class="spacer"></div><button id="btnClearRecent" class="mini">Clear</button></div>
+          <div id="recentList" class="mini-list"></div>
+        </div>
+      </section>
+
+      <!-- ================= VALIDATION ================= -->
+      <section id="panel-validation" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Validation</h2>
+            <p class="muted">Reference, palette, asset, target and 2.0.0 compatibility checks.</p>
+          </div>
+          <div class="panel-head-actions">
+            <select id="validationFilter">
+              <option value="all">All results</option>
+              <option value="error">Errors</option>
+              <option value="warn">Warnings</option>
+              <option value="info">Info</option>
+            </select>
+            <button id="btnRunValidation">Run validation</button>
+          </div>
+        </div>
+        <div class="panel-toolbar">
           <span id="validationSummary" class="muted"></span>
         </div>
         <div id="validationResults"></div>
       </section>
     </main>
 
+    <div id="dockResizer" class="resizer" title="Drag to resize preview"></div>
+
     <aside id="preview-panel">
       <div class="preview-head">
         <div class="preview-head-row">
           <h2>Preview</h2>
-          <button id="btnSavePreview" title="Save the current preview as a PNG">Save PNG</button>
+          <span class="pill">480×222</span>
+          <div class="spacer"></div>
+          <button id="btnPreviewFit" class="mini" title="Fit (0)">Fit</button>
+          <button id="btnPreview100" class="mini" title="100% (1)">1:1</button>
+          <button id="btnPreview2x" class="mini" title="200% (2)">2×</button>
+          <button id="btnSavePreview" class="mini" title="Save the current preview as a PNG">PNG</button>
+          <button id="btnPreviewFocus" class="mini" title="Focus preview (F)">⛶</button>
         </div>
         <select id="previewComponent"></select>
-      </div>
-      <div id="previewCanvasWrap">
-        <canvas id="previewCanvas"></canvas>
-      </div>
-      <div id="previewControls">
+        <div class="preview-toolbar">
+          <label class="check"><input type="checkbox" id="simulateMode"> Simulate</label>
+          <label class="check"><input type="checkbox" id="editMode"> Edit</label>
+          <label class="check"><input type="checkbox" id="snapGrid"> Snap 5</label>
+          <label class="check"><input type="checkbox" id="showGrid"> Grid</label>
+          <button id="btnSimBack" disabled title="Go back in the simulated screen stack">◂ Back</button>
+        </div>
+        <div class="preview-toolbar zoom-toolbar">
+          <label for="previewZoom">Zoom</label>
+          <select id="previewZoom">
+            <option value="0.5">0.5×</option>
+            <option value="1">1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+            <option value="4">4×</option>
+            <option value="fit">Fit</option>
+          </select>
+          <button id="btnZoomOut" class="mini" title="Zoom out">−</button>
+          <input id="zoomRange" type="range" min="0.25" max="6" step="0.01" value="2">
+          <button id="btnZoomIn" class="mini" title="Zoom in">+</button>
+          <span id="zoomLabel" class="mono">100%</span>
+        </div>
         <div id="variantRow" class="control-row hidden">
           <label>Screen</label>
           <select id="previewVariant"></select>
@@ -186,51 +587,142 @@
           <label>Frame</label>
           <input id="previewFrame" type="number" min="0" value="0" step="1">
           <span id="previewFrameCount" class="muted"></span>
+          <button id="btnPlayFrames" class="mini">▶</button>
         </div>
         <div id="itemRow" class="control-row hidden">
           <label>Selected item</label>
           <input id="previewSelectedItem" type="number" min="0" value="0" step="1">
           <span id="previewItemCount" class="muted"></span>
         </div>
-        <div class="control-row">
-          <label class="check"><input type="checkbox" id="simulateMode"> Simulate</label>
-          <label class="check"><input type="checkbox" id="editMode"> Edit layout</label>
-          <label class="check"><input type="checkbox" id="snapGrid"> Snap 5px</label>
-          <button id="btnSimBack" disabled title="Go back in the simulated screen stack">◂ Back</button>
-          <label>Zoom
-            <select id="previewZoom">
-              <option value="1">1x</option>
-              <option value="1.5">1.5x</option>
-              <option value="2" selected>2x</option>
-              <option value="3">3x</option>
-              <option value="fit">Fit</option>
-            </select>
-          </label>
+      </div>
+
+      <div id="previewStage">
+        <div id="previewCanvasWrap">
+          <canvas id="previewCanvas"></canvas>
         </div>
+        <div id="previewOverlay">
+          <div id="previewHoverTag" class="hover-tag hidden"></div>
+        </div>
+        <div id="previewStageHint" class="stage-hint">Ctrl+wheel zoom · Space+drag pan</div>
       </div>
-      <div id="variablesBox" class="variables hidden">
-        <div class="variables-head">Simulation variables</div>
-        <div id="variableList"></div>
+
+      <div class="dock-head">
+        <button class="dock-tab active" data-dock="layers">Layers</button>
+        <button class="dock-tab" data-dock="inspect">Inspector</button>
+        <button class="dock-tab" data-dock="sim">Sim</button>
+        <button class="dock-tab" data-dock="vars">Variables</button>
+        <div class="spacer"></div>
+        <span id="dockInfo" class="muted mono"></span>
       </div>
-      <div id="layersBox" class="layers">
-        <div class="panel-subhead"><span>Layers</span><button id="btnAddLayer" class="mini" title="Add an image layer to the selected item (or background)">＋ Layer</button></div>
-        <ul id="layerList" class="layer-list"></ul>
+      <div id="dockBody">
+        <section class="dock-pane active" data-dock-pane="layers">
+          <div id="layersBox" class="layers">
+            <div class="panel-subhead">
+              <span>Layers</span>
+              <div class="layer-actions">
+                <button id="btnAddLayer" class="mini" title="Add an image or text layer to the selected item (or background)">＋ Layer</button>
+                <button id="btnAddTextLayer" class="mini" title="Add a text layer">T</button>
+                <button id="btnAddImageLayer" class="mini" title="Add an image layer">🖼</button>
+                <button id="btnDuplicateLayer" class="mini" title="Duplicate selection">⧉</button>
+              </div>
+            </div>
+            <input id="layerFilter" type="text" placeholder="Filter layers…" class="dock-filter">
+            <ul id="layerList" class="layer-list"></ul>
+          </div>
+        </section>
+        <section class="dock-pane" data-dock-pane="inspect">
+          <div id="propsBox" class="props">
+            <div class="panel-subhead"><span>Properties</span><button id="btnPropsAdvanced" class="mini" title="Open raw JSON for this component">JSON</button></div>
+            <div id="propsFields" class="props-fields"></div>
+          </div>
+        </section>
+        <section class="dock-pane" data-dock-pane="sim">
+          <div class="dock-sim">
+            <div class="panel-subhead"><span>Simulation</span><span id="simModeLabel" class="muted">click elements in the preview</span></div>
+            <div class="dock-sim-buttons">
+              <button data-dock-sim="up">▲</button>
+              <button data-dock-sim="down">▼</button>
+              <button data-dock-sim="left">◀</button>
+              <button data-dock-sim="right">▶</button>
+              <button data-dock-sim="a">A / Select</button>
+              <button data-dock-sim="b">B / Back</button>
+            </div>
+            <div id="dockSimInfo" class="muted">Load a component to simulate.</div>
+          </div>
+        </section>
+        <section class="dock-pane" data-dock-pane="vars">
+          <div id="variablesBox" class="variables hidden">
+            <div class="variables-head">Simulation variables</div>
+            <div id="variableList"></div>
+          </div>
+        </section>
       </div>
-      <div id="propsBox" class="props hidden">
-        <div class="panel-subhead">Properties</div>
-        <div id="propsFields" class="props-fields"></div>
+      <div id="previewHint">
+        <span>Edit to drag elements · Simulate to click through screens</span>
+        <span id="previewCoords" class="mono"></span>
       </div>
-      <div id="previewHint">Enable <em>Edit layout</em> to drag elements, or <em>Simulate</em> to click through screens.<span id="previewCoords" class="mono"></span></div>
     </aside>
   </div>
 
+  <footer id="statusbar">
+    <span id="statusTheme">No theme</span>
+    <span class="sep-dot">·</span>
+    <span id="statusScreen">—</span>
+    <span class="spacer"></span>
+    <span id="statusSelection">—</span>
+    <span class="sep-dot">·</span>
+    <span id="statusZoom">100%</span>
+    <span class="sep-dot">·</span>
+    <span id="statusValidation">not validated</span>
+  </footer>
+
   <div id="toast" class="hidden"></div>
+
+  <!-- command palette -->
+  <div id="commandOverlay" class="overlay hidden">
+    <div class="command-box">
+      <input id="commandInput" type="text" placeholder="Search commands, components, assets, colors…" autocomplete="off">
+      <div id="commandResults" class="command-results"></div>
+      <div class="command-foot"><kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>Enter</kbd> run <kbd>Esc</kbd> close</div>
+    </div>
+  </div>
+
+  <!-- template gallery / generic modal -->
+  <div id="modalRoot" class="overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3 id="modalTitle">Dialog</h3>
+        <button id="modalClose" class="mini">✕</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- advanced editor iframe -->
+  <div id="advancedOverlay" class="overlay hidden">
+    <div class="advanced-shell">
+      <div class="advanced-head">
+        <span>Advanced image editor</span>
+        <span id="advancedName" class="muted mono"></span>
+        <div class="spacer"></div>
+        <button id="advancedSave" class="primary-soft">Use result</button>
+        <button id="advancedClose" class="mini">Close</button>
+      </div>
+      <iframe id="advancedFrame" title="Advanced image editor"></iframe>
+    </div>
+  </div>
+
+  <!-- context menu -->
+  <div id="contextMenu" class="context-menu hidden"></div>
 
   <script src="palette.js"></script>
   <script src="zip.js"></script>
   <script src="validators.js"></script>
+  <script src="templates.js"></script>
   <script src="model.js"></script>
   <script src="preview.js"></script>
+  <script src="imagelab.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

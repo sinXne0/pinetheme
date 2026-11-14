@@ -1,16 +1,17 @@
 {
-  "name": "pager-theme-builder",
-  "version": "0.1.0",
-  "description": "Free, open-source GUI theme builder for the Hak5 WiFi Pineapple Pager",
+  "name": "pinetheme-studio",
+  "version": "0.2.0",
+  "description": "PineTheme Studio — an all-in-one, open-source theme studio for the Hak5 WiFi Pineapple Pager",
   "main": "main.js",
-  "author": "",
+  "author": "PineTheme Studio contributors",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "test": "electron test/smoke.js && electron test/interaction.js",
+    "test": "electron test/smoke.js && electron test/interaction.js && electron test/studio.js",
     "test:smoke": "electron test/smoke.js",
-    "test:interaction": "electron test/interaction.js"
+    "test:interaction": "electron test/interaction.js",
+    "test:studio": "electron test/studio.js"
   },
   "devDependencies": {
     "electron": "^33.0.0"
