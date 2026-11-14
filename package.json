@@ -1,7 +1,7 @@
 {
   "name": "pinetheme-studio",
   "version": "0.2.0",
-  "description": "PineTheme Studio — an all-in-one, open-source theme studio for the Hak5 WiFi Pineapple Pager",
+  "description": "PineTheme Studio \u2014 an all-in-one, open-source theme studio for the Hak5 WiFi Pineapple Pager",
   "main": "main.js",
   "author": "PineTheme Studio contributors",
   "license": "MIT",
@@ -11,7 +11,10 @@
     "test": "electron test/smoke.js && electron test/interaction.js && electron test/studio.js",
     "test:smoke": "electron test/smoke.js",
     "test:interaction": "electron test/interaction.js",
-    "test:studio": "electron test/studio.js"
+    "test:studio": "electron test/studio.js",
+    "android:build": "bash android/build.sh",
+    "android:web": "node android/tools/build-web.js",
+    "android:test": "node android/tools/smoke-test.js && node android/tools/device-test.js"
   },
   "devDependencies": {
     "electron": "^33.0.0"

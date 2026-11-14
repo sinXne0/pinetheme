@@ -3,3 +3,8 @@ dist/
 out/
 *.log
 .DS_Store
+
+# Android build outputs and signing material
+android/build/
+android/dist/
+android/keystore/

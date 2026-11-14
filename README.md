@@ -240,6 +240,19 @@ npm start
 This installs `~/.local/bin/pgt`, a desktop entry and an icon. Launch **PineTheme
 Studio** from your app menu or run `pgt`.
 
+### Android app
+
+There is a native Android build that runs the same studio in a WebView — no
+Gradle, no AndroidX, ~1.1 MB. Install the APK or build it yourself:
+
+```bash
+adb install -r android/dist/PineTheme-Studio-0.2.0-android.apk
+bash android/tools/install-toolchain.sh && bash android/build.sh
+```
+
+See [android/README.md](android/README.md) for the architecture, the mobile
+file model (ZIP import/export, app-storage autosave), and the device tests.
+
 ### Tests
 
 ```bash

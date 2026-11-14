@@ -2880,7 +2880,7 @@
   function bindPreviewInteraction() {
     const cv = $('previewCanvas');
 
-    cv.addEventListener('mousedown', (e) => {
+    const onCanvasPress = (e) => {
       if (state.pan || state.spaceDown || e.button === 1) return;
       const p = canvasPoint(e);
       const region = hitTest(p.x, p.y);
@@ -2921,7 +2921,8 @@
         state.preview.selectedIndex = region.itemIndex;
         renderPreview();
       }
-    });
+    };
+    cv.addEventListener('mousedown', onCanvasPress);
 
     cv.addEventListener('mousemove', (e) => {
       const p = canvasPoint(e);
@@ -2966,6 +2967,10 @@
         return;
       }
       if (!state.drag) return;
+      applyDrag(e);
+    });
+
+    function applyDrag(e) {
       const p = canvasPoint(e);
       const dx = p.x - state.drag.startX;
       const dy = p.y - state.drag.startY;
@@ -2990,9 +2995,13 @@
       if (dx || dy) state.drag.moved = true;
       updateStatusSelection();
       requestPreviewRender();
-    });
+    }
 
     window.addEventListener('mouseup', () => {
+      endGesture();
+    });
+
+    function endGesture() {
       if (state.pan) {
         const wrap = $('previewCanvasWrap');
         if (wrap) wrap.classList.remove('panning');
@@ -3007,6 +3016,33 @@
           updateHistoryButtons();
         }
       }
+    }
+
+    // ---- touch: same gestures as the mouse, for the Android build -------
+    // The CSS keeps `touch-action: none` on the canvas while Edit is on, so a
+    // one-finger drag moves the selection instead of scrolling the wrapper.
+    cv.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1 || !$('editMode').checked) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      onCanvasPress({ clientX: t.clientX, clientY: t.clientY, button: 0, shiftKey: false });
+    }, { passive: false });
+
+    cv.addEventListener('touchmove', (e) => {
+      if (!state.drag || e.touches.length !== 1) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      applyDrag({ clientX: t.clientX, clientY: t.clientY, shiftKey: false });
+    }, { passive: false });
+
+    cv.addEventListener('touchend', (e) => {
+      if (!state.drag) return;
+      e.preventDefault();
+      endGesture();
+    }, { passive: false });
+
+    cv.addEventListener('touchcancel', () => {
+      if (state.drag) endGesture();
     });
 
     // Drag an image file onto the canvas to import it as a layer.
@@ -5223,7 +5259,10 @@
       $('previewCanvas').classList.toggle('simulating', $('simulateMode').checked);
       // Pixel editing needs a crisp scale. If the dock is fitted smaller than
       // 100%, jump to 1:1 so drags and nudges land on exact source pixels.
-      if ($('editMode').checked && state.preview.zoomMode === 'fit' && computeFitZoom() < 1) {
+      // On a phone 1:1 would hide most of the 480px-wide canvas behind a
+      // scrollbar, so the Android build stays fitted and snaps to 5px instead.
+      const isPhoneLayout = document.body.classList.contains('pt-mobile');
+      if (!isPhoneLayout && $('editMode').checked && state.preview.zoomMode === 'fit' && computeFitZoom() < 1) {
         setZoom('fixed', 1);
       }
       renderPreview();

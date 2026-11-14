@@ -1,0 +1,300 @@
+/*
+ * PineTheme Studio — Android / touch layout.
+ *
+ * Everything is scoped to body.pt-mobile (set by bridge.js) so the desktop
+ * Electron build is byte-for-byte unaffected by this stylesheet.
+ */
+
+body.pt-mobile {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  font-size: 13px;
+}
+
+body.pt-mobile ::-webkit-scrollbar { width: 7px; height: 7px; }
+body.pt-mobile ::-webkit-scrollbar-thumb { background: #21443a; border-radius: 4px; }
+
+/* ---- toolbar ---------------------------------------------------------- */
+body.pt-mobile #toolbar {
+  flex-wrap: nowrap;
+  overflow: visible;
+  align-items: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 5px 8px;
+}
+body.pt-mobile .brand { flex: 0 0 auto; gap: 5px; }
+body.pt-mobile .brand-mark { font-size: 17px; }
+body.pt-mobile .brand-text { font-size: 12px; letter-spacing: .01em; }
+body.pt-mobile .cursor { display: none; }
+body.pt-mobile #projectInfo { display: none; }
+body.pt-mobile .toolbar-actions {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 4px;
+  scrollbar-width: none;
+}
+body.pt-mobile .toolbar-actions::-webkit-scrollbar { display: none; }
+body.pt-mobile .toolbar-actions .sep { display: none; }
+body.pt-mobile #toolbar button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* ---- app shell -------------------------------------------------------- */
+body.pt-mobile #app {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+body.pt-mobile #content {
+  order: 2;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 10px 10px 22px;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.pt-mobile #dockResizer { display: none; }
+
+/* ---- sidebar becomes a bottom tab bar --------------------------------- */
+body.pt-mobile #sidebar {
+  order: 3;
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 2px;
+  border-right: none;
+  border-top: 1px solid var(--border);
+  padding: 3px 4px calc(3px + env(safe-area-inset-bottom, 0px));
+  scrollbar-width: none;
+}
+body.pt-mobile #sidebar::-webkit-scrollbar { display: none; }
+body.pt-mobile #sidebar .nav-group,
+body.pt-mobile #sidebar .nav-footer,
+body.pt-mobile #sidebar .spacer { display: none; }
+body.pt-mobile #sidebar .nav-item {
+  position: relative;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 58px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 8.5px;
+  letter-spacing: .02em;
+}
+body.pt-mobile #sidebar .nav-item .ico { width: auto; font-size: 15px; }
+body.pt-mobile #sidebar .nav-item span:not(.ico):not(.nav-badge) { display: block; }
+body.pt-mobile #sidebar .nav-item.active { box-shadow: inset 0 2px 0 var(--accent), var(--glow); }
+body.pt-mobile #sidebar .nav-badge {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  margin: 0;
+}
+
+/* ---- preview sheet ---------------------------------------------------- */
+body.pt-mobile #preview-panel {
+  order: 1;
+  flex: 0 0 auto;
+  height: 56vh;
+  max-height: 56vh;
+  border-left: none;
+  border-bottom: 1px solid var(--border);
+}
+body.pt-mobile .preview-head {
+  padding: 5px 7px;
+  gap: 5px;
+  max-height: 116px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+body.pt-mobile .preview-head > * { flex: 0 0 auto; }
+body.pt-mobile .preview-toolbar button {
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 9px;
+}
+/* Redundant with tapping the canvas / the screen selector on a phone. */
+body.pt-mobile #itemRow { display: none; }
+body.pt-mobile #previewHint { display: none; }
+body.pt-mobile .preview-head h2 { font-size: 11px; flex: 0 0 auto; }
+body.pt-mobile .preview-head .pill { display: none; }
+body.pt-mobile .preview-head-row {
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+body.pt-mobile .preview-head-row::-webkit-scrollbar { display: none; }
+body.pt-mobile .preview-head-row .spacer { display: none; }
+body.pt-mobile .preview-head-row .mini {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 4px 8px;
+}
+body.pt-mobile .preview-head-row #btnSavePreview { margin-left: auto; }
+body.pt-mobile .preview-head select { padding: 4px 6px; font-size: 11px; height: 30px; }
+body.pt-mobile .preview-toolbar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 10px;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+body.pt-mobile .preview-toolbar::-webkit-scrollbar { display: none; }
+body.pt-mobile .preview-toolbar .check { white-space: nowrap; }
+/* The Fit / 1:1 / 2x buttons live in the head row; pinch-zoom is disabled,
+   so the numeric zoom strip is dead weight on a phone. */
+body.pt-mobile .zoom-toolbar { display: none; }
+body.pt-mobile #previewStage { flex: 1 1 auto; min-height: 130px; }
+body.pt-mobile #previewCanvasWrap { padding: 5px; }
+body.pt-mobile #previewStageHint { display: none; }
+body.pt-mobile #previewCanvas { touch-action: pan-x pan-y; }
+body.pt-mobile.pt-edit #previewCanvas { touch-action: none; }
+body.pt-mobile #dockBody {
+  flex: 0 1 auto;
+  min-height: 86px;
+  max-height: 28%;
+}
+body.pt-mobile .dock-head { overflow-x: auto; }
+body.pt-mobile .layers, body.pt-mobile .props, body.pt-mobile .variables,
+body.pt-mobile .dock-sim { padding: 5px 7px; }
+
+/* collapsed / focus states */
+body.pt-mobile.pt-preview-collapsed #preview-panel {
+  height: 44px;
+  max-height: 44px;
+  overflow: hidden;
+}
+body.pt-mobile.pt-preview-collapsed .preview-head > *:not(.preview-head-row),
+body.pt-mobile.pt-preview-collapsed #previewStage,
+body.pt-mobile.pt-preview-collapsed .dock-head,
+body.pt-mobile.pt-preview-collapsed #dockBody { display: none !important; }
+body.pt-mobile.focus-preview #preview-panel {
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none;
+}
+
+/* ---- panels / forms --------------------------------------------------- */
+body.pt-mobile .split,
+body.pt-mobile .asset-split,
+body.pt-mobile .lab-layout,
+body.pt-mobile .sim-layout {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: none;
+  height: auto;
+  min-height: 0;
+  gap: 12px;
+}
+body.pt-mobile .split-left { max-height: 36vh; }
+body.pt-mobile .split-right { min-height: 320px; }
+body.pt-mobile .file-list { max-height: 30vh; }
+body.pt-mobile #themeJsonEditor { height: 46vh; min-height: 240px; }
+body.pt-mobile .lab-canvas,
+body.pt-mobile .lab-canvas-wrap { min-height: 260px; }
+body.pt-mobile .lab-controls { max-height: none; }
+body.pt-mobile .asset-detail { max-width: none; }
+body.pt-mobile .form-grid { grid-template-columns: 1fr; }
+body.pt-mobile .form-grid .span-2 { grid-column: span 1; }
+body.pt-mobile .form-row { grid-template-columns: 104px minmax(0, 1fr); }
+body.pt-mobile .manifest-row { grid-template-columns: 108px minmax(0, 1fr); }
+body.pt-mobile .manifest-row > :last-child { grid-column: 2; }
+body.pt-mobile .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body.pt-mobile .overview-columns,
+body.pt-mobile .screen-map,
+body.pt-mobile .template-grid,
+body.pt-mobile .shortcut-grid { grid-template-columns: 1fr; }
+body.pt-mobile .quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body.pt-mobile .color-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); }
+body.pt-mobile .asset-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+body.pt-mobile .panel-head { flex-direction: column; gap: 10px; }
+body.pt-mobile .panel-head .actions { flex-wrap: wrap; }
+
+/* Larger touch targets for text fields and mini buttons */
+body.pt-mobile input,
+body.pt-mobile select,
+body.pt-mobile textarea { font-size: 13px; }
+body.pt-mobile button,
+body.pt-mobile .mini { min-height: 32px; }
+body.pt-mobile .mini { padding: 5px 9px; font-size: 10px; }
+body.pt-mobile input[type=checkbox] { width: 17px; height: 17px; }
+body.pt-mobile input[type=range] { min-height: 28px; }
+
+/* ---- overlays --------------------------------------------------------- */
+body.pt-mobile .overlay { padding: 5vh 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
+body.pt-mobile .modal { width: 100%; max-height: 90vh; }
+body.pt-mobile .command-box { width: 100%; }
+body.pt-mobile .advanced-shell { width: 100vw; height: 100vh; border-radius: 0; border: none; }
+body.pt-mobile .context-menu { min-width: 208px; }
+body.pt-mobile .context-menu button { padding: 9px 10px; font-size: 12px; }
+body.pt-mobile #toast {
+  left: 10px;
+  right: 10px;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  transform: none;
+  width: auto;
+  max-width: none;
+  text-align: center;
+}
+
+/* ---- landscape: side-by-side like the desktop, but compact ------------ */
+@media (orientation: landscape) and (max-height: 560px) {
+  body.pt-mobile #app { flex-direction: row; }
+  body.pt-mobile #sidebar {
+    order: 1;
+    flex-direction: column;
+    width: 64px;
+    min-width: 64px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-top: none;
+    border-right: 1px solid var(--border);
+    padding: 4px;
+  }
+  body.pt-mobile #sidebar .nav-item { min-width: 0; padding: 6px 3px; font-size: 8px; }
+  body.pt-mobile #content { order: 2; }
+  body.pt-mobile #preview-panel {
+    order: 3;
+    width: 50%;
+    height: auto;
+    max-height: none;
+    border-bottom: none;
+    border-left: 1px solid var(--border);
+  }
+  body.pt-mobile #previewStage { min-height: 100px; }
+  /* One compact control strip instead of a tall stacked header. */
+  body.pt-mobile .preview-head {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    max-height: 46px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 6px;
+  }
+  body.pt-mobile .preview-head > * { flex: 0 0 auto; }
+  body.pt-mobile .preview-head-row,
+  body.pt-mobile .preview-toolbar { overflow: visible; }
+  body.pt-mobile .preview-head-row .mini { min-height: 26px; padding: 3px 7px; }
+  body.pt-mobile .preview-head-row #btnSavePreview { margin-left: 0; }
+  body.pt-mobile .preview-head select { width: auto; min-width: 120px; max-width: 190px; height: 26px; }
+  body.pt-mobile #dockBody { flex: 0 0 24%; min-height: 64px; max-height: 24%; }
+}
