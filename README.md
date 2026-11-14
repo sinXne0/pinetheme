@@ -1,106 +1,228 @@
-# Pager Theme Builder
+# PineTheme Studio
 
-A free, open-source desktop GUI for creating and customizing themes for the
-**Hak5 WiFi Pineapple Pager** — a local alternative to the paid Theme Studio Pro.
+An all-in-one, open-source theme studio for the **Hak5 WiFi Pineapple Pager**.
+Create, edit, preview and package Pager themes (framework 0.9 / `theme_version`
+`2.0.0`) without hand-editing JSON or juggling image files.
 
-Built with Electron. Everything runs offline, and the app has **zero runtime
-dependencies** beyond Electron itself: ZIP reading/writing, theme parsing and
-validation are implemented in plain JavaScript in `src/`.
+Built with Electron. Everything runs offline. The core editor, ZIP engine,
+renderer, validators and image pipeline are plain JavaScript in `src/`, with a
+vendored advanced image editor for heavier compositing work.
 
-![Pager Theme Builder screenshot](screenshot.png)
+![PineTheme Studio](screenshot.png)
 
 ![Pager screen size: 480 × 222](https://img.shields.io/badge/preview-480%C3%97222-6ad2f9)
+![Theme version: 2.0.0](https://img.shields.io/badge/theme-2.0.0-00ff9c)
 
 ---
 
-## Features
+## Why this exists
 
-- **Full color palette editing** — edit all 30 named palette colors with a color
-  picker or hex field, add new colors, remove unused ones. Import or export a
-  palette as JSON, or reset to the default palette. Changes appear in the live
-  preview immediately.
-- **Pixel-for-pixel live preview** of the Pager's 480 × 222 screen, rendered with
-  the same layered model the firmware uses:
-  - absolute background layers
-  - menu items with per-item relative layers and `selected_layers`
-  - status bars
-  - string / toggle / radio / signal templates, including each template state
-  - `recolor_palette` image tinting
-  - multi-page screens, multi-screen components, and boot-animation frames
-  - multi-line / wrapped text using `max_chars`, `wrap_text`, and `max_lines`
-  - keyboard input areas and image-only screens (update checker, etc.)
-- **Interactive simulation** — enable *Simulate* and click a menu item to follow
-  its `target`: jump to a `generic_menus` screen, navigate pages, follow
-  `goto <id>`, toggle inline toggles, and go **Back** through a screen stack.
-- **Variable editor** — set sample values for `$_VAR` template variables (SSIDs,
-  names, descriptions, battery, etc.) and see them render live; toggle and
-  checkbox templates switch between their enabled/disabled states.
-- **Drag-and-drop layout editing** — enable *Edit layout*, then drag any element
-  to move it. Hold **Shift** while dragging a menu item to move the whole item
-  (all of its layers) instead of one layer. Arrow keys nudge the selection by
-  1 px (Shift + arrow moves the whole item). Optional **Snap 5px** aligns dragged
-  elements to a 5 px grid, and a live coordinate readout shows the pointer
-  position on the 480 × 222 canvas.
-- **Layers panel** — a Photoshop-style list of every background layer and menu
-  item (with its unselected/selected layers). Click to select, toggle an eye to
-  hide a layer from the preview (still exported), reorder with ↑/↓, delete with
-  ✕, or add a new layer with **＋ Layer**.
-- **Properties inspector** — edit the selected layer or item precisely: X/Y
-  position, image (with an asset picker), recolor/text palette, text content,
-  text size, and template variable. Selection stays in sync between the canvas
-  and the layers panel.
-- **Undo / redo** — every palette, metadata, layout, component and asset change
-  is undoable (up to 80 steps). Use the toolbar buttons or Ctrl+Z / Ctrl+Shift+Z.
-- **Dirty-state protection** — switching themes or closing the window asks
-  before discarding unsaved changes.
-- **Component JSON editor** — browse all components, edit the raw JSON, apply it
-  (button or **Ctrl+Enter**), and preview that component directly. Invalid JSON
-  is rejected with an error.
-- **Component management** — create, duplicate, rename and delete components
-  from the Components tab. Renaming updates every path reference in
-  `theme.json` and other component files; deleting warns when references remain.
-  Import a component from a `.json` file or export the selected component.
-- **Raw `theme.json` editor** — edit the manifest directly with **Format**,
-  **Reload** and **Apply** (or **Ctrl+Enter**). Unsaved edits survive tab
-  switches and are validated before they replace the live manifest.
-- **Asset management** — browse every asset with lazy thumbnails, filter by
-  name, see dimensions, file size and how many times it is referenced, import
-  images (button or drag-and-drop), replace an existing image, rename an asset
-  (updating every reference), delete selected assets, or delete all unused
-  assets in one step. Importing a file with an existing name replaces it.
-- **Save a preview PNG** — export the current 480 × 222 preview for docs or
-  sharing.
-- **Validation** — checks `theme.json`, palette values, referenced component
-  files, referenced assets, undefined palette names, and case-insensitive path
-  collisions. A sidebar badge shows the problem count, each result has an
-  **Open** action that jumps to the relevant editor, and export warns before
-  producing a package with validation errors.
-- **Duplicate theme** — clone the current theme in memory as a new copy so you
-  can experiment without touching the original.
-- **Export a valid theme package** — Save to a folder, or export a ZIP that is
-  verified against the official reference theme's file set.
-- **Start from the official `wargames` theme** — 301 files are bundled as a
-  known-good scaffold, so a new theme is always structurally valid. **New blank**
-  creates a minimal `theme.json` + palette theme when you want to start from
-  scratch.
-- **One-command launcher** — `pgt` on your PATH, plus an optional desktop entry
-  and icon.
+The official Pager theme system is powerful but JSON-heavy: a theme is a web of
+component files, palette names, asset paths, template maps and target bindings.
+PineTheme Studio gives that system a real IDE:
+
+- a **pixel-accurate 480 × 222 preview** that no longer gets clipped,
+- a **resizable dock** with fit / 1:1 / 2× / 3× / 6× zoom, wheel zoom and
+  space-drag panning,
+- **direct manipulation** on the canvas (drag, multi-select, snap, nudge,
+  reorder, hide/lock layers),
+- an **Image Lab** tuned for tiny Pager assets (dithering, thresholding,
+  palette quantization, crop/resize, outlines, shadows),
+- **2.0.0 schema coverage** for the fields community themes actually use.
 
 ---
 
-## Requirements
+## Feature tour
 
-- **Node.js 18+** (Node 20+ recommended)
-- Linux, macOS or Windows with a graphical display
-- `npm` (comes with Node)
+### Studio workspace
 
-Electron is installed as a dev dependency, so no global install is required.
+- **Resizable three-pane layout** — drag the divider between the editor and the
+  preview dock. The width is remembered between sessions. Double-click the
+  divider to reset it.
+- **Focus preview (F)** — hides the rest of the UI and gives the preview the
+  whole window. `Esc` returns.
+- **Dock tabs** — Layers, Inspector, Sim and Variables share the lower dock, so
+  the canvas gets the space it needs.
+- **Overview dashboard** — component/asset/color counts, package size, theme
+  health, a **2.0.0 readiness** card, a palette strip, a filterable screen map and
+  quick actions.
+- **Command palette (Ctrl+K)** — jump to any component, asset, palette color or
+  screen, or run studio commands from the keyboard.
+- **Status bar** — theme, current screen, selection coordinates, zoom and
+  validation state at a glance.
+
+### Preview and simulation
+
+- **Pixel-for-pixel 480 × 222 renderer** with:
+  - background layers, background colors and `background_path` screens,
+  - menu items with per-item layers and `selected_layers`,
+  - multi-page screens, keyboard rows (`qwerty`, `QWERTY`, `symbols`),
+  - boot/spinner animation frames and item animation frames,
+  - status bars, including Bluetooth bars and per-item states,
+  - string / toggle / radio / signal templates,
+  - `recolor_palette`, direct `recolor_rgb` tints and `text_color` aliases,
+  - multi-line and wrapped text (`max_chars`, `wrap_text`, `max_lines`),
+  - `center_text_within`, `save_cancel_menu`, payload-log indicators and more.
+- **Simulation mode** — click a menu item to follow its `target`:
+  `generic_menus` jumps, `next_page` / `previous_page`, `goto <id>`,
+  `inline_toggle`, `back` / `cancel` / `close`, plus a back stack.
+- **Full simulator panel** — D-pad / A / B buttons honor each screen's
+  `button_map`, history, status-bar state selectors and live variables.
+- **Variable editor** — set sample `$_VAR` values and see them render live.
+- **Status state control** — preview battery/volume/brightness/vibrate states.
+
+### Visual editing
+
+- **Drag and multi-select** — click, Shift-click, drag selections, and move
+  groups. Optional 5 px snapping and a grid overlay.
+- **Arrow-key nudging** — 1 px; Shift+Arrow for 10 px.
+- **Layers panel** — eye (hide from preview), lock, reorder via ↑/↓ or drag,
+  duplicate, delete, add text/image layers. Hidden/locked state never changes
+  the exported theme.
+- **Inspector** — every common layer and item field: X/Y, image, recolor palette
+  and RGB, text, variable, text size, template, max chars/lines, wrapping,
+  centering box, target, button map, selected/unselectable, animation interval.
+- **Screen inspector** — edit `screen_name`, `status_bar`, `windowed_canvas`,
+  `cache_canvases`, `refresh_interval`, `visible_lines`, `title_x/y` and
+  background color without touching JSON.
+- **Context menu** — duplicate, copy, paste, delete, reorder, select parent item,
+  add layers, open the component JSON.
+- **Undo / redo** — 80 steps across palette, metadata, layout, component and asset
+  changes.
+
+### Component studio
+
+- Browse all components with a type badge and a `theme.json` reference marker.
+- **Template gallery** with generators for dashboards, lists, dialogs, alerts,
+  status bars, keyboards, animations, text/toggle/radio/signal templates,
+  splash screens and recon graph configs.
+- Create, duplicate, rename (updating every reference), delete, import and
+  export components.
+- Structured form or raw JSON; `Ctrl+Enter` applies JSON.
+- Open the current component in the preview or simulator with one click.
+
+### Manifest studio
+
+- `theme.json` is presented as **sections**: identity, status bars, generic
+  menus, templates, option dialogs, dialogs/alerts, core surfaces, recon,
+  keyboards, Pager Portal, images and other keys.
+- Every path field has a component/asset picker and an **Open** action.
+- Add new map bindings without editing JSON.
+- Raw JSON mode retains Format / Reload / Apply and `Ctrl+Enter`.
+- Metadata edits write through to `theme.json` and the generated `README.md`.
+
+### Palette tools
+
+- Edit all palette colors with pickers and hex fields; add, remove, import,
+  export, sort by luminance or hue, and reset to the default warGames palette.
+- **Contrast checker** with WCAG AA / AAA ratios.
+- **Harmony generator** — complementary, split, analogous, triadic, tetradic,
+  monochrome and shades.
+- **Palette extraction** — median-cut color extraction from any image.
+- **Starter presets** — WarGames, Amber CRT, Cyberpunk, DMG and Mono.
+
+### Image Lab
+
+A focused, offline image pipeline for Pager assets:
+
+- Crop/resize with contain, cover or stretch; nearest-neighbor by default.
+- Rotate 90°, flip H/V, trim transparent bounds.
+- Brightness, contrast, saturation, hue, gamma, alpha cutoff, invert, grayscale.
+- **Pagerize** modes: threshold (1-bit), Floyd–Steinberg, Atkinson, Bayer 4×4,
+  Bayer 8×8, nearest-palette remap and palette + Bayer dither.
+- Palette-aware dark/light colors and optional force-to-palette-color.
+- Outline, drop shadow and tint effects.
+- Checkerboard preview, fit/100%/200% zoom and a hold-for-before button.
+- Apply back to the asset, save as a new asset, or export PNG.
+- Standard size presets: 480×222, 33×29, 63×62, 71×72, 20×20, 220×156,
+  400×180 and 44×28.
+- **Advanced editor** — a vendored [Toast UI Image Editor](https://github.com/nhn/tui.image-editor)
+  (MIT) opens in an isolated local frame for freeform crop, draw, shapes, text,
+  masks and filters. “Use result” sends the image back to the Image Lab.
+
+### Assets
+
+- Lazy thumbnails with dimensions, size and reference counts.
+- Filter, sort by path/size/usage/dimensions.
+- Import (button or drag-and-drop), replace, rename with reference updates,
+  delete, delete all unused.
+- **Find usages** across `theme.json` and components.
+- **Open in Image Lab** from the inspector or asset grid.
+- **Asset inspector** with a large preview and usage list.
+
+### Theme library
+
+- Scan a local clone of
+  [`hak5/wifipineapplepager-themes`](https://github.com/hak5/wifipineapplepager-themes)
+  or any folder of themes.
+- Cards show version, framework, component/asset counts, author, palette swatches
+  and path.
+- Open a theme or clone it as a new working copy.
+- Recent themes are remembered locally.
+- Works with the repo root or a `themes/` directory.
+
+### Validation
+
+- `theme.json` presence, JSON validity, version/framework fields.
+- Palette shape and range checks.
+- Every referenced component **and asset** path in `theme.json`.
+- Component JSON validity, missing images, undefined palette names,
+  `text_color` aliases and `recolor_rgb` ranges.
+- Undefined status bars and Bluetooth status bars.
+- Case-insensitive filename collisions.
+- Boot animation / spinner presence.
+- Non-fatal info: unused assets, repeated item IDs, missing optional metadata and
+  large package size.
+- Results have **Open** actions that jump to the right editor; export warns
+  before shipping errors.
+
+### Packaging
+
+- Save to a folder or export a ZIP (verified by the test suite).
+- Generated `README.md` with name, author, version, framework, description and
+  install instructions.
+- Duplicate the current theme as a new copy.
+- Start from the bundled official `wargames` theme or a minimal blank theme.
+
+---
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl/Cmd + K` | Command palette |
+| `Ctrl/Cmd + S` | Save |
+| `Ctrl/Cmd + Shift + S` | Save as |
+| `Ctrl/Cmd + E` | Export ZIP |
+| `Ctrl/Cmd + O` | Open folder |
+| `Ctrl/Cmd + Z` | Undo |
+| `Ctrl/Cmd + Shift + Z` / `Ctrl+Y` | Redo |
+| `Ctrl/Cmd + C / V / D` | Copy / paste / duplicate selection |
+| `Delete` | Delete selection |
+| Arrow keys | Nudge 1 px |
+| Shift + Arrow | Nudge 10 px |
+| `0` | Fit preview |
+| `1` / `2` | 100% / 200% preview |
+| `+` / `-` | Zoom in / out |
+| `F` | Focus preview |
+| `Esc` | Close modal / clear selection / leave focus |
+| `Ctrl/Cmd + wheel` | Zoom preview at pointer |
+| `Space` + drag | Pan preview |
+| `Ctrl/Cmd + Enter` | Apply JSON in editors |
+| `Shift` + click | Add to selection |
+| `Shift` + drag a menu item | Move the whole item |
 
 ---
 
 ## Install and run
 
-### From GitHub
+### Requirements
+
+- Node.js 18+ (20+ recommended)
+- Linux, macOS or Windows with a graphical display
+- `npm`
+
+### From source
 
 ```bash
 git clone https://github.com/sinXne0/pinetheme.git
@@ -109,292 +231,105 @@ npm install
 npm start
 ```
 
-The app is Electron-based and installs everything it needs via `npm install`
-(Electron is the only dev dependency). No global install is required.
-
 ### `pgt` launcher and desktop entry
-
-Install a launcher on your PATH and a desktop-menu entry:
 
 ```bash
 ./packaging/install-desktop.sh
 ```
 
-That script:
+This installs `~/.local/bin/pgt`, a desktop entry and an icon. Launch **PineTheme
+Studio** from your app menu or run `pgt`.
 
-- writes `~/.local/bin/pgt`
-- installs an icon under `~/.local/share/icons/`
-- writes `~/.local/share/applications/pgt-theme-builder.desktop`
-
-Then run:
+### Tests
 
 ```bash
-pgt          # launch the app
-pgt --dev    # launch with DevTools
+npm test
 ```
 
-If `~/.local/bin` is not on your `PATH`, add this to your shell config:
-
-```bash
-alias pgt="$HOME/.local/bin/pgt"
-```
-
-Useful scripts:
-
-| Command | What it does |
-| --- | --- |
-| `npm start` | Launch the app |
-| `npm run dev` | Launch with DevTools open |
-| `npm test` | Run both end-to-end tests |
-| `npm run test:smoke` | Boot test: loads the reference theme and verifies the UI/preview |
-| `npm run test:interaction` | Exercises color preview, drag, undo/redo, assets, palette/PNG export, validation, ZIP export |
-| `./packaging/install-desktop.sh` | Install the `pgt` launcher, icon and desktop entry |
-
-> On a headless Linux box, run the tests under Xvfb:
-> `xvfb-run -a npm test`.
+The suite boots the real Electron renderer against the bundled reference theme
+and exercises colors, preview rendering, simulation, drag editing, undo/redo,
+palette import/export, PNG export, ZIP round-tripping, component/asset CRUD,
+reference updates, validation and blank-theme scaffolding.
 
 ---
 
-## Quick start
+## Theme format notes (2.0.0 / framework 0.9)
 
-1. Launch the app. It automatically creates an **Untitled Theme** by cloning the
-   bundled `wargames` reference theme. Use **New blank** if you prefer to start
-   with only `theme.json` and a default palette.
-2. Open **Metadata** and set the theme name, author, version and description.
-3. Open **Colors** and adjust the palette. The preview updates as you pick colors.
-   Use **Import palette…**, **Export palette…**, or **Reset to default** as needed.
-4. Use the **Preview** panel on the right:
-   - choose a component from the dropdown
-   - choose a screen/variant, page, or animation frame when available
-   - enable **Edit layout** and drag elements (Shift-drag moves a whole item)
-   - optionally enable **Snap 5px** for grid-aligned dragging
-   - use the arrow keys to nudge by 1 px
-   - switch **Zoom** to **Fit** to scale the preview to the panel
-   - click **Save PNG** to export the current preview
-5. Open **Components** to create, duplicate, rename or delete components, or
-   open **Theme JSON** for direct manifest editing. **Validation** badges and
-   **Open** actions help you jump straight to broken references.
-6. Open **Validation** and run it. Fix any errors before exporting.
-7. Click **Save** / **Save as…** to write a theme folder, or **Export ZIP** to
-   create a distributable archive.
+A theme is a directory containing:
 
-### Keyboard shortcuts
-
-| Shortcut | Action |
-| --- | --- |
-| `Ctrl+S` | Save |
-| `Ctrl+Shift+S` | Save as… |
-| `Ctrl+E` | Export ZIP |
-| `Ctrl+O` | Open theme folder |
-| `Ctrl+Z` | Undo |
-| `Ctrl+Shift+Z` / `Ctrl+Y` | Redo |
-| `Ctrl+Enter` | Apply the JSON editor (component or theme.json) |
-| Arrow keys | Nudge selected element by 1 px |
-| `Shift` + arrow | Nudge the whole menu item |
-
-### Preview controls
-
-| Control | Purpose |
-| --- | --- |
-| Component dropdown | Select any of the theme's 135 components to preview |
-| Screen | Pick a variant when a component contains multiple screens, template states, keyboard layouts, or image-only states |
-| Page | Pick a page for paginated screens |
-| Frame | Pick a frame for boot animations |
-| Selected item | Highlight a specific menu item's selected state |
-| Edit layout | Click to select, drag to move |
-| Simulate | Click menu items to follow targets and navigate screens |
-| Back | Return to the previous simulated screen |
-| Variables | Edit sample values for `$_VAR` template variables |
-| Snap 5px | Align dragged elements to a 5 px grid |
-| Layers | Select, hide, reorder, delete or add layers/items |
-| Properties | Edit X/Y, image, palette, text and size of the selection |
-| Zoom | 1x / 1.5x / 2x / 3x, or **Fit** to scale to the panel |
-| Coordinate readout | Shows the pointer position in canvas pixels |
-| Save PNG | Save the current 480 × 222 preview as a PNG |
-
----
-
-## Installing a theme on the Pager
-
-Themes live in `/root/themes/<theme-name>/`. Do **not** edit files under
-`/lib/pager/themes/` — that is the read-only stock location, and changes there
-are ignored or overwritten.
-
-### From a saved folder
-
-```bash
-scp -r my-theme root@<pager-ip>:/root/themes/
-```
-
-Or on the Pager itself:
-
-```bash
-cp -r /path/to/my-theme /root/themes/mycooltheme
-```
-
-### From an exported ZIP
-
-```bash
-scp my-theme.zip root@<pager-ip>:/root/themes/
-ssh root@<pager-ip>
-cd /root/themes
-unzip my-theme.zip -d mycooltheme
-```
-
-The folder you install must contain `theme.json` at its top level:
-
-```
-/root/themes/mycooltheme/
-├── theme.json
-├── README.md
+```text
+my-theme/
 ├── assets/
-└── components/
+├── components/
+├── theme.json
+└── README.md
 ```
 
-Then select the theme on the Pager under **Settings → Display → Theme** (or
-reboot if the theme list does not refresh).
+`theme.json` wires named surfaces to component files: status bars, generic menus,
+dashboards, dialogs, keyboards, templates, recon lists, Pager Portal screens,
+alerts, lock screen, spinners and more. `color_palette` maps color names to
+`{r,g,b}` values. Components are layered JSON screens.
+
+PineTheme Studio understands the additions used by the 2.0.0 reference and
+community themes, including:
+
+- `recolor_rgb` and `text_color`
+- `radio_template`, `save_cancel_menu`, `scrolling`/payload-log indicator arrays
+- `bt_status_bar`, `title_x` / `title_y`
+- `refresh_interval`, `visible_lines`, `default_text_color`, `error_text_color`
+- `failsafe_duckyscript_list_picker`, `fallback_menu`, `theme_name`
+- uppercase `QWERTY` and `symbols` keyboard screens
+- item `selected`, `unselectable`, `animation`, `animation_interval` and
+  `button_map`
+
+The bundled `reference/wargames` theme is the 2.0.0 known-good scaffold used by
+**New theme**.
 
 ---
 
-## Project layout
+## Architecture
 
-```
-pinetheme/
-├── main.js                 Electron main process + IPC (open/save dialogs)
-├── preload.js              Safe window.api bridge
-├── src/
-│   ├── index.html          UI structure
-│   ├── styles.css          Dark UI styling
-│   ├── app.js              UI controller, drag editing, save/export
-│   ├── model.js            ThemeModel: file map, palette, component cache
-│   ├── preview.js          Canvas renderer for the 480×222 screen
-│   ├── palette.js          Default palette + color helpers
-│   ├── validators.js       Theme validation
-│   └── zip.js              Dependency-free ZIP writer/reader
-├── reference/wargames/     Bundled known-good reference theme (301 files)
-├── packaging/
-│   ├── pgt.in              `pgt` launcher template
-│   ├── icon.svg            Desktop icon
-│   ├── pgt-theme-builder.desktop.in  Desktop entry template
-│   └── install-desktop.sh  Installs the launcher, icon and desktop entry
-└── test/
-    ├── smoke.js            Boot / render / UI smoke test
-    └── interaction.js      End-to-end editing and export test
+```text
+src/
+├── index.html          studio shell
+├── styles.css          layout and visual language
+├── app.js              state, panels, preview interaction, library, command palette
+├── model.js            theme file map + parsed helpers
+├── palette.js          color math, contrast, harmonies, median-cut extraction
+├── preview.js          480×222 layered canvas renderer
+├── imagelab.js         crop/resize/grade/dither/palette/effects pipeline
+├── templates.js        component generators, manifest metadata, presets
+├── validators.js       theme validation
+├── zip.js              dependency-free ZIP read/write
+├── advanced-editor.html / advanced-editor.js
+└── vendor/tui/         vendored Toast UI Image Editor + color picker (MIT)
 ```
 
-### How edits are stored
-
-All files are kept in memory as a flat `Map` of path → base64. Parsed component
-objects are cached so drag edits can mutate them directly; `flushComponents()`
-writes those objects back to the file map before save, export or validation.
-This means a drag edit is persisted even if you never open the component JSON
-editor.
-
-Undo history stores shallow snapshots of that file map. File entries are
-immutable, and `flushComponents()` leaves unchanged entries alone, so snapshots
-stay cheap even for a 300-file theme. Undo/redo restores the snapshot and
-refreshes the UI and preview.
-
-### ZIP format
-
-Exports use the ZIP **STORE** method (no compression — theme assets are mostly
-PNGs, which are already compressed). The writer emits standard local headers,
-a central directory and an end-of-central-directory record with CRC-32 checksums.
-Opening a ZIP supports both STORE and DEFLATE (via the browser's
-`DecompressionStream`).
+Runtime dependencies: none beyond Electron. Everything else is bundled or plain
+JavaScript.
 
 ---
 
-## Validation checks
+## Credits and open source
 
-- `theme.json` exists and is valid JSON
-- `theme_version` / `theme_framework_version` are present
-- every palette entry is `{r,g,b}` with values 0–255
-- every component referenced by `theme.json` exists
-- every component JSON parses
-- every `image_path` referenced by a component exists in `assets/`
-- palette names referenced by components are defined
-- files that differ only by case are flagged (Windows/macOS collisions)
-- boot animation / spinner components are present
-- at least one asset exists
+PineTheme Studio is an independent, unofficial community tool. WiFi Pineapple,
+Pineapple Pager and Hak5 are trademarks of Hak5 LLC.
 
----
+- **Toast UI Image Editor** and **tui-color-picker** — MIT, NHN Cloud. Vendored
+  for the optional advanced editor; Fabric.js is bundled inside the Toast UI
+  distribution (MIT).
+- **Palette/dithering algorithms** — implemented in-house based on the public
+  Floyd–Steinberg, Atkinson and Bayer ordered-dithering algorithms.
+- The official theme format is defined by
+  [`hak5/wifipineapplepager-themes`](https://github.com/hak5/wifipineapplepager-themes).
+  The bundled `reference/wargames` theme is used as a known-good scaffold and
+  remains the property of its authors.
 
-## Limitations
-
-- The preview is an approximation of the firmware renderer. Fonts and exact
-  glyph metrics differ from the Pager, and some firmware-drawn widgets (for
-  example clock text and a few specialized screens) are simplified. Text
-  wrapping honors `max_chars` / `wrap_text` / `max_lines` but uses a monospace
-  font.
-- Keyboard previews render each key layout plus a sample `input_area`; typing
-  into the preview is not simulated.
-- Theme metadata (name/author/description) is stored in `README.md`; version and
-  framework version are also written to `theme.json`. The Pager itself does not
-  read a theme name from `theme.json`, so the installed folder name is what you
-  will see in the theme list.
-- A **New blank** theme contains only `theme.json` and `README.md`. Add the
-  components and assets it references before installing it on the Pager.
-- Renaming a component rewrites path references in `theme.json` and component
-  JSON files, but does not rewrite unrelated `screen_name` values or action
-  target strings. Deleting a component leaves its references in place so you can
-  repoint them; validation will flag them.
-- The app is not code-signed. On macOS/Windows you may need to allow it to run
-  the first time.
-
----
-
-## Tests
-
-The tests boot a real hidden Electron window and drive the actual UI:
-
-```bash
-npm run test:smoke
-npm run test:interaction
-```
-
-`test:interaction` verifies, among other things:
-
-- 30 palette colors, 135 components and 163 assets load
-- palette edits change the rendered canvas
-- recolored images are re-tinted after a palette change
-- text wrapping and explicit newlines behave correctly
-- template-state, keyboard-input and image-only preview variants are detected
-- `$_VAR` sample values can be overridden and render live
-- simulate mode follows `generic_menus` targets and pushes a back stack
-- undo/redo works through the toolbar and Ctrl+Z / Ctrl+Shift+Z
-- palette JSON import validates colors and rejects non-object data
-- palette export writes a 30-color JSON file
-- preview PNG export writes a valid 480 × 222 PNG
-- dragging moves a layer by exactly the drag delta and persists to the file map
-- arrow-key nudging moves by 1 px
-- the layers panel lists layers/items; selecting, editing X/Y in the inspector,
-  toggling visibility, and deleting a layer all work
-- **Fit** zoom scales the canvas and the coordinate readout reports canvas pixels
-- **Snap 5px** is off by default and aligns dragged elements to the grid
-- image import adds an asset and updates the grid
-- dragging an image file onto the asset grid imports it
-- selecting an asset shows its reference/usage count
-- the raw `theme.json` editor applies valid JSON, rejects invalid JSON, and
-  reloads the live manifest; Ctrl+Enter applies too
-- the validation badge appears for problems and clears when they are fixed
-- component create, duplicate, rename (with reference updates) and delete work
-- component import, Ctrl+Enter apply and export work
-- asset rename updates references, unused assets are flagged and bulk-deleted
-- case-insensitive path collisions are reported
-- duplicate-theme clones the current theme in memory
-- validation reports 0 errors / 0 warnings for a cloned reference theme
-- the exported ZIP passes the system `unzip -t` integrity check, re-opens with
-  the built-in reader, and contains the expected files
-- animation-frame and multi-page controls change the preview
-- reloading a theme clears stale image caches
-- **New blank** creates a two-file theme with the default palette
+If you use or adapt this studio, credit the project and the upstream theme
+format. Community themes and assets keep their original authors' rights.
 
 ---
 
 ## License
 
-MIT for the application code. The bundled `reference/wargames` theme is property
-of Hak5 LLC and is included only as a known-good reference/scaffold for building
-themes for the WiFi Pineapple Pager. This project is not affiliated with or
-endorsed by Hak5.
+MIT. See [LICENSE](LICENSE).

@@ -1,6 +1,7 @@
 // Canvas-based preview renderer that approximates the Pager's 480x222
-// layered rendering model closely enough to be genuinely useful for
-// designing themes.
+// layered rendering model. Supports the 2.0.0 additions used by community
+// themes (recolor_rgb, text_color, radio_template, status bar states,
+// animations, save_cancel_menu, QWERTY keyboards, etc.).
 class PreviewRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -12,11 +13,15 @@ class PreviewRenderer {
     this.model = null;
     this._images = new Map();      // path -> Image (loaded)
     this._pending = new Map();     // path -> Promise<Image>
-    this._recolored = new Map();   // path + '|' + color -> canvas
+    this._recolored = new Map();   // path + '|' + rgb -> canvas
     this.hitRegions = [];
     this.lastScreen = null;
+    this.lastComponentPath = null;
     this.variables = {};           // $_VAR -> user-supplied sample value
     this.hidden = null;            // Set of layer/item objects to skip when drawing
+    this.statusStates = {};        // status item name -> state key
+    this.animationFrame = 0;       // frame index for screen/item animations
+    this.playing = false;
   }
 
   setModel(model) {
@@ -30,11 +35,15 @@ class PreviewRenderer {
     this.variables = vars || {};
   }
 
+  setStatusStates(states) {
+    this.statusStates = states || {};
+  }
+
   // Interpret a variable value as a boolean for toggle/checkbox templates.
   truthy(v) {
     if (v == null || v === '') return true;
     if (typeof v === 'boolean') return v;
-    return /^(true|on|1|yes|enabled|checked)$/i.test(String(v));
+    return /^(true|on|1|yes|enabled|checked|selected)$/i.test(String(v));
   }
 
   // Drop cached images for one asset path (e.g. after replace/delete/import).
@@ -76,9 +85,19 @@ class PreviewRenderer {
     return p[name] || null;
   }
 
-  recolor(path, colorName) {
+  // Resolve palette names, RGB objects and #hex strings.
+  resolveColor(value) {
+    if (value == null) return null;
+    if (typeof value === 'object') {
+      return { r: Palette.clamp(value.r || 0), g: Palette.clamp(value.g || 0), b: Palette.clamp(value.b || 0) };
+    }
+    if (typeof value === 'string' && value.startsWith('#')) return Palette.fromHex(value);
+    return this.paletteColor(value);
+  }
+
+  recolor(path, colorName, directRgb) {
     const img = this._images.get(path);
-    const color = this.paletteColor(colorName);
+    const color = directRgb || this.resolveColor(colorName);
     if (!img || !color) return img;
     // Key on the resolved RGB, not the palette name, so editing a color
     // invalidates the tinted copy automatically.
@@ -111,7 +130,10 @@ class PreviewRenderer {
     for (const m of maps) {
       if (tj[m] && typeof tj[m][name] === 'string') {
         const comp = this.model.getComponent(tj[m][name]);
-        if (comp && !comp.__parseError) return { type: m === 'string_templates' ? 'text' : m.replace('_templates', ''), data: comp };
+        if (comp && !comp.__parseError) {
+          const type = m === 'string_templates' ? 'text' : m.replace('_templates', '');
+          return { type, data: comp };
+        }
       }
     }
     return null;
@@ -179,13 +201,14 @@ class PreviewRenderer {
     return out;
   }
 
-  drawText(text, x, y, size, colorName, center, opts = {}) {
+  drawText(text, x, y, size, colorValue, center, opts = {}) {
     const ctx = this.ctx;
     const px = this.fontSize(size);
     ctx.font = px + "px 'Courier New', monospace";
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
-    ctx.fillStyle = Palette.toCss(this.paletteColor(colorName) || { r: 255, g: 255, b: 255 });
+    const col = this.resolveColor(colorValue) || { r: 255, g: 255, b: 255 };
+    ctx.fillStyle = Palette.toCss(col);
 
     let lines = this.wrapText(text, opts.max_chars || opts.maxChars, opts.wrap_text || opts.wrap);
     const maxLines = opts.max_lines || opts.maxLines;
@@ -210,22 +233,34 @@ class PreviewRenderer {
     return { w: Math.max(1, maxW), h: Math.max(1, blockH) };
   }
 
-  async drawImageLayer(path, x, y, colorName) {
+  async drawImageLayer(path, x, y, colorValue, directRgb) {
     const img = await this.ensureImage(path);
     if (!img) return null;
     let draw = img;
-    let w = img.naturalWidth;
-    let h = img.naturalHeight;
-    if (colorName && this.paletteColor(colorName)) {
-      draw = this.recolor(path, colorName);
-    }
+    const color = directRgb || this.resolveColor(colorValue);
+    if (color) draw = this.recolor(path, colorValue, color);
     this.ctx.drawImage(draw, Math.round(x), Math.round(y));
-    return { x, y, w, h };
+    return { x, y, w: img.naturalWidth, h: img.naturalHeight };
+  }
+
+  layerTextColor(layer, template) {
+    return (template && (template.text_color_palette || template.text_color)) ||
+      layer.text_color_palette || layer.text_color || null;
+  }
+
+  async drawStateLayers(states, x, y, meta, prefer) {
+    const keys = Object.keys(states || {});
+    let key = prefer;
+    if (!key || !(key in (states || {}))) key = keys[0];
+    const layers = (states || {})[key] || [];
+    for (const l of layers) await this.drawLayer(l, x, y, meta);
   }
 
   // Draw one layer. `ox,oy` is the origin (0,0 for background/statusbar
   // absolute layers, or the menu item's x,y for item layers).
   async drawLayer(layer, ox, oy, meta) {
+    if (!layer || layer._comment) return;
+    if (this.hidden && this.hidden.has(layer)) return;
     const x = ox + (layer.x || 0);
     const y = oy + (layer.y || 0);
     const hit = (w, h) => this.hitRegions.push({
@@ -237,17 +272,18 @@ class PreviewRenderer {
     if (layer.string_template) {
       const t = layer.string_template;
       const text = layer.text != null ? layer.text : this.sampleValue(layer.variable_name || layer.variable);
-      const box = this.drawText(text, x, y, t.text_size, t.text_color_palette, t.center_text_within, t);
+      const box = this.drawText(text, x, y, t.text_size, this.layerTextColor(layer, t), t.center_text_within, t);
       hit(box.w, box.h);
       return;
     }
-    // inline toggle template
-    if (layer.toggle_template) {
+    // inline toggle / radio templates
+    if (layer.toggle_template || layer.radio_template) {
+      const tpl = layer.toggle_template || layer.radio_template;
       const v = layer.variable_name || layer.variable || (meta.item && meta.item.variable);
       const on = this.truthy(this.variables[v]);
       const layers = on
-        ? (layer.toggle_template.enabled || layer.toggle_template.disabled || [])
-        : (layer.toggle_template.disabled || layer.toggle_template.enabled || []);
+        ? (tpl.enabled || tpl.disabled || [])
+        : (tpl.disabled || tpl.enabled || []);
       for (const l of layers) await this.drawLayer(l, x, y, meta);
       return;
     }
@@ -257,17 +293,14 @@ class PreviewRenderer {
       if (t) {
         if (t.type === 'text') {
           const text = layer.text != null ? layer.text : this.sampleValue(layer.variable_name || layer.variable);
-          const box = this.drawText(text, x, y, t.data.text_size, t.data.text_color_palette, t.data.center_text_within, t.data);
+          const box = this.drawText(text, x, y, t.data.text_size, this.layerTextColor(layer, t.data), t.data.center_text_within, t.data);
           hit(box.w, box.h);
-        } else if (t.type === 'toggle') {
+        } else if (t.type === 'toggle' || t.type === 'radio') {
           const v = layer.variable_name || layer.variable || (meta.item && meta.item.variable);
-          const on = this.truthy(this.variables[v]);
+          const on = t.type === 'toggle' ? this.truthy(this.variables[v]) : true;
           const layers = on
             ? (t.data.enabled || t.data.disabled || [])
             : (t.data.disabled || t.data.enabled || []);
-          for (const l of layers) await this.drawLayer(l, x, y, meta);
-        } else if (t.type === 'radio') {
-          const layers = t.data.enabled || t.data.disabled || [];
           for (const l of layers) await this.drawLayer(l, x, y, meta);
         } else if (t.type === 'signal') {
           const layers = t.data.strong_signal || t.data.max_signal || t.data.weak_signal || t.data.minimum_signal || [];
@@ -279,13 +312,13 @@ class PreviewRenderer {
     // plain text / variable
     if (layer.text != null || layer.variable_name || layer.variable) {
       const text = layer.text != null ? layer.text : this.sampleValue(layer.variable_name || layer.variable);
-      const box = this.drawText(text, x, y, layer.text_size, layer.text_color_palette, layer.center_text_within, layer);
+      const box = this.drawText(text, x, y, layer.text_size, this.layerTextColor(layer, null), layer.center_text_within, layer);
       hit(box.w, box.h);
       return;
     }
     // image
     if (layer.image_path) {
-      const box = await this.drawImageLayer(layer.image_path, x, y, layer.recolor_palette);
+      const box = await this.drawImageLayer(layer.image_path, x, y, layer.recolor_palette || layer.recolor_rgb, layer.recolor_rgb || null);
       if (box) hit(box.w, box.h);
     }
   }
@@ -306,6 +339,10 @@ class PreviewRenderer {
       this.ctx.fillRect(0, 0, this.width, this.height);
     }
     await this.drawLayers(bg.layers || [], 0, 0, { item: null, itemIndex: -1 });
+    // Some 2.0.0 components use a single background_path instead of background.
+    if (screen.background_path && (!bg.layers || !bg.layers.length)) {
+      await this.drawImageLayer(screen.background_path, 0, 0, null, null);
+    }
   }
 
   async drawMenuItems(items, selectedIndex) {
@@ -315,33 +352,43 @@ class PreviewRenderer {
       if (this.hidden && this.hidden.has(item)) continue;
       const ox = item.x || 0;
       const oy = item.y || 0;
-      const selected = i === selectedIndex;
+      const selected = i === selectedIndex || item.selected === true;
       // Keyboards and some one-state items only define selected_layers, so
       // fall back to those when no unselected layers exist.
       const layers = selected
         ? (item.selected_layers || item.layers || [])
         : (item.layers || item.selected_layers || []);
 
-      // animation (spinner-like) — draw first frame
+      // animation (spinner-like) — draw the active frame
       if (item.animation && item.animation.length) {
-        const f = item.animation[0];
-        const box = await this.drawImageLayer(f.image_path, ox + (f.x || 0), oy + (f.y || 0), f.recolor_palette);
-        if (box) this.hitRegions.push({ x: box.x, y: box.y, w: box.w, h: box.h, layer: f, item, itemIndex: i });
+        const idx = Math.min(item.animation.length - 1, Math.max(0, this.animationFrame | 0));
+        const f = item.animation[idx];
+        if (f) {
+          const box = await this.drawImageLayer(f.image_path, ox + (f.x || 0), oy + (f.y || 0), f.recolor_palette || f.recolor_rgb);
+          if (box) this.hitRegions.push({ x: box.x, y: box.y, w: box.w, h: box.h, layer: f, item, itemIndex: i });
+        }
         continue;
       }
       await this.drawLayers(layers, ox, oy, { item, itemIndex: i });
     }
   }
 
-  async drawStatusBar(screen) {
-    const statusBarName = screen.status_bar;
-    if (!statusBarName || !this.model) return;
+  statusBarPath(screen) {
+    if (!this.model) return null;
     const tj = this.model.getThemeJson() || {};
-    const path = (tj.status_bars && tj.status_bars[statusBarName]) || null;
+    const names = [screen.status_bar];
+    if (screen.bt_status_bar) names.push(screen.bt_status_bar);
+    for (const name of names) {
+      if (name && tj.status_bars && tj.status_bars[name]) return tj.status_bars[name];
+    }
+    return null;
+  }
+
+  async drawStatusBar(screen) {
+    const path = this.statusBarPath(screen);
     if (!path) return;
     const comp = this.model.getComponent(path);
     if (!comp || comp.__parseError || !comp.status_bar_items) return;
-
     for (const [name, item] of Object.entries(comp.status_bar_items)) {
       const ox = item.x || 0;
       const oy = item.y || 0;
@@ -350,12 +397,74 @@ class PreviewRenderer {
       if (!stateKeys.length) {
         // firmware-drawn text (e.g. Time) — draw a sample
         const sample = name === 'Time' ? '12:34' : name;
-        this.drawText(sample, ox, oy, 'small', item.recolor_palette, null);
+        this.drawText(sample, ox, oy, 'small', item.recolor_palette || item.recolor_rgb || 'soft_white', null);
         continue;
       }
-      const layers = states[stateKeys[0]] || [];
-      await this.drawLayers(layers, ox, oy, { item, itemIndex: -1 });
+      const preferred = this.statusStates[name] || this.statusStates['*'] || null;
+      await this.drawStateLayers(states, ox, oy, { item, itemIndex: -1 }, preferred);
     }
+  }
+
+  // Payload log / streaming text preview (2.0.0).
+  drawLogLines(screen) {
+    if (!screen || screen.visible_lines == null) return;
+    const count = Math.max(1, Math.min(40, screen.visible_lines | 0));
+    const size = screen.text_size || 'small';
+    const px = this.fontSize(size);
+    const lineH = Math.round(px * 1.15);
+    const x = screen.start_x != null ? screen.start_x : 6;
+    const y = screen.start_y != null ? screen.start_y : 24;
+    const defaultColor = screen.default_text_color || screen.text_color_palette || 'soft_white';
+    const errorColor = screen.error_text_color || 'red';
+    const maxChars = screen.max_chars || 50;
+    const samples = [
+      '[*] payload started',
+      '[*] scanning interfaces...',
+      '[+] found target network',
+      '[i] channel 6 · -52 dBm',
+      '[+] handshake captured',
+      '[*] writing loot/2026-01-01.cap',
+      '[-] retrying deauth (3/5)',
+      '[*] cleaning up'
+    ];
+    for (let i = 0; i < count; i++) {
+      const text = (samples[i % samples.length] + ' ' + (i + 1)).slice(0, maxChars);
+      const isErr = /^\[-\]/.test(text) && i === count - 1;
+      this.drawText(text, x, y + i * lineH, size, isErr ? errorColor : defaultColor, null, { max_chars: maxChars });
+    }
+  }
+
+  // Recon dashboard graph (2.0.0 dashboard_recon). The real data is supplied
+  // by the firmware, so draw representative bars for layout previewing.
+  drawReconGraph(screen) {
+    if (!screen || screen.graph_width == null || screen.bar_w == null) return;
+    const ctx = this.ctx;
+    const x0 = screen.x_start != null ? screen.x_start : 23;
+    const yTop = screen.y_top != null ? screen.y_top : 92;
+    const yBottom = screen.y_bottom != null ? screen.y_bottom : 178;
+    const barW = Math.max(1, screen.bar_w || 8);
+    const gap = Math.max(0, screen.bar_gap || 1);
+    const width = Math.max(1, screen.graph_width || 45);
+    const count = Math.max(1, Math.floor(width / (barW + gap)));
+    const color = this.resolveColor(screen.bar_color_palette || screen.text_color_palette) || { r: 231, g: 197, b: 74 };
+    ctx.save();
+    ctx.fillStyle = Palette.toCss(color);
+    for (let i = 0; i < count; i++) {
+      const t = 0.18 + 0.82 * Math.abs(Math.sin((i + 1) * 1.17));
+      const h = Math.round((yBottom - yTop) * t);
+      ctx.fillRect(Math.round(x0 + i * (barW + gap)), yBottom - h, barW, h);
+    }
+    const labelColor = this.resolveColor(screen.text_color_palette) || color;
+    const small = this.fontSize('small');
+    ctx.font = small + "px 'Courier New', monospace";
+    ctx.fillStyle = Palette.toCss(labelColor);
+    ctx.textBaseline = 'top';
+    const lx = screen.y_label_x != null ? screen.y_label_x : 440;
+    const ly = screen.y_label_y != null ? screen.y_label_y : 83;
+    ctx.fillText('100', lx, ly);
+    ctx.fillText('50', screen.y_half_label_x != null ? screen.y_half_label_x : lx, screen.y_half_label_y != null ? screen.y_half_label_y : 132);
+    ctx.fillText('0', lx, yBottom - small);
+    ctx.restore();
   }
 
   // ---- public API ---------------------------------------------------------
@@ -363,8 +472,17 @@ class PreviewRenderer {
     if (!comp) return [{ name: '', screen: null }];
     if (comp.__parseError) return [{ name: '', screen: comp }];
     const looksLikeScreen = (v) => v && typeof v === 'object' &&
-      (v.menu_items || v.rows || v.pages || v.background || v.animation || v.status_bar_items);
-    if (looksLikeScreen(comp)) return [{ name: '', screen: comp }];
+      (v.menu_items || v.rows || v.pages || v.background || v.animation || v.status_bar_items ||
+       v.save_cancel_menu || v.title_x != null);
+    if (looksLikeScreen(comp)) {
+      if (comp.save_cancel_menu) {
+        return [
+          { name: comp.screen_name || 'main', screen: comp },
+          { name: 'save_cancel', screen: comp.save_cancel_menu }
+        ];
+      }
+      return [{ name: '', screen: comp }];
+    }
 
     // Keyboard components keep their text field in `input_area`, separate
     // from the key layouts. Expose it as its own preview variant.
@@ -376,7 +494,12 @@ class PreviewRenderer {
     for (const [k, v] of Object.entries(comp)) {
       if (k.startsWith('_')) continue;
       if (inputArea && k === 'input_area') continue;
-      if (looksLikeScreen(v)) out.push({ name: k, screen: v });
+      if (looksLikeScreen(v)) {
+        out.push({ name: k, screen: v });
+        if (v.save_cancel_menu && v.save_cancel_menu !== v) {
+          out.push({ name: k + '_save_cancel', screen: v.save_cancel_menu });
+        }
+      }
     }
     if (out.length) return inputArea ? [inputArea, ...out] : out;
 
@@ -409,11 +532,15 @@ class PreviewRenderer {
   async render(componentPath, opts = {}) {
     this.hitRegions = [];
     this.hidden = opts.hidden || null;
+    this.statusStates = opts.statusStates || this.statusStates || {};
+    this.animationFrame = opts.frameIndex || 0;
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, this.width, this.height);
     ctx.imageSmoothingEnabled = false;
+    this.lastComponentPath = componentPath || null;
+    this.lastScreen = null;
 
     const comp = this.model ? this.model.getComponent(componentPath) : null;
     if (!comp) return this.hitRegions;
@@ -423,7 +550,8 @@ class PreviewRenderer {
     }
 
     const screens = this.listScreens(comp);
-    const screen = screens[opts.variantIndex || 0].screen;
+    const idx = Math.min(screens.length - 1, Math.max(0, opts.variantIndex || 0));
+    const screen = screens[idx] && screens[idx].screen;
     this.lastScreen = screen;
     if (!screen) return this.hitRegions;
 
@@ -432,7 +560,7 @@ class PreviewRenderer {
       return this.hitRegions;
     }
     if (screen.__singleImage) {
-      await this.drawImageLayer(screen.__singleImage, 0, 0, screen.__recolor || null);
+      await this.drawImageLayer(screen.__singleImage, 0, 0, screen.__recolor || null, null);
       return this.hitRegions;
     }
     if (screen.__inputArea) {
@@ -453,10 +581,22 @@ class PreviewRenderer {
       const page = screen.pages[opts.pageIndex || 0] || screen.pages[0];
       if (page && page.menu_items) await this.drawMenuItems(page.menu_items, opts.selectedIndex || 0);
     } else if (screen.rows) {
-      for (const row of screen.rows) await this.drawMenuItems(row, -1);
+      const flat = [];
+      for (const row of screen.rows) for (const it of row || []) flat.push(it);
+      await this.drawMenuItems(flat, opts.selectedIndex || 0);
+    } else if (screen.visible_lines != null) {
+      this.drawLogLines(screen);
+    } else if (screen.save_cancel_menu) {
+      const sc = screen.save_cancel_menu;
+      if (sc.pages) {
+        const page = sc.pages[opts.pageIndex || 0] || sc.pages[0];
+        if (page && page.menu_items) await this.drawMenuItems(page.menu_items, opts.selectedIndex || 0);
+      } else if (sc.menu_items) {
+        await this.drawMenuItems(sc.menu_items, opts.selectedIndex || 0);
+      }
     } else if (screen.animation && screen.animation.frames) {
       const f = screen.animation.frames[opts.frameIndex || 0] || screen.animation.frames[0];
-      if (f) await this.drawImageLayer(f.image_path, f.x || 0, f.y || 0, f.recolor_palette);
+      if (f) await this.drawImageLayer(f.image_path, f.x || 0, f.y || 0, f.recolor_palette || f.recolor_rgb, null);
     } else if (screen.status_bar_items) {
       // pure status bar component
       await this.drawStatusBarInline(screen.status_bar_items);
@@ -465,6 +605,22 @@ class PreviewRenderer {
       this.drawText('Sample text', screen.x || 15, screen.y || 16, 'medium', 'soft_white', null, {
         max_chars: screen.max_characters
       });
+    }
+
+    if (screen.graph_width != null) {
+      this.drawReconGraph(screen);
+    }
+
+    // Payload log / list indicator arrays (2.0.0).
+    const indicatorKeys = [
+      'scroll_pause_indicator', 'scroll_up_indicator', 'scroll_down_indicator',
+      'payload_running_indicator', 'payload_complete_indicator', 'payload_stopped_indicator',
+      'payload_error_indicator', 'payload_errored_indicator'
+    ];
+    for (const key of indicatorKeys) {
+      if (Array.isArray(screen[key])) {
+        await this.drawLayers(screen[key], 0, 0, { item: null, itemIndex: -1 });
+      }
     }
 
     return this.hitRegions;
@@ -477,11 +633,23 @@ class PreviewRenderer {
       const states = item.layers || {};
       const stateKeys = Object.keys(states);
       if (!stateKeys.length) {
-        this.drawText(name === 'Time' ? '12:34' : name, ox, oy, 'small', item.recolor_palette, null);
+        this.drawText(name === 'Time' ? '12:34' : name, ox, oy, 'small', item.recolor_palette || 'soft_white', null);
         continue;
       }
-      await this.drawLayers(states[stateKeys[0]] || [], ox, oy, { item, itemIndex: -1 });
+      const preferred = this.statusStates[name] || this.statusStates['*'] || null;
+      await this.drawStateLayers(states, ox, oy, { item, itemIndex: -1 }, preferred);
     }
+  }
+
+  // List status bar states for the simulation UI.
+  statusBarOptions(comp) {
+    const out = [];
+    if (!comp || !comp.status_bar_items) return out;
+    for (const [name, item] of Object.entries(comp.status_bar_items)) {
+      const states = Object.keys(item.layers || {});
+      if (states.length) out.push({ name, states, selected: this.statusStates[name] || states[0] });
+    }
+    return out;
   }
 }
 

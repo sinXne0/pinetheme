@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the `pgt` launcher and a desktop entry for the Pager Theme Builder.
+# Install the `pgt` launcher and a desktop entry for PineTheme Studio.
 # Usage: ./packaging/install-desktop.sh
 set -euo pipefail
 
@@ -35,4 +35,4 @@ gtk-update-icon-cache -f -t "$DATA_DIR/icons/hicolor" >/dev/null 2>&1 || true
 
 echo "Installed launcher: $BIN_DIR/pgt"
 echo "Installed desktop entry: $DESKTOP_FILE"
-echo "Run 'pgt' or launch 'Pager Theme Builder' from your app menu."
+echo "Run 'pgt' or launch 'PineTheme Studio' from your app menu."

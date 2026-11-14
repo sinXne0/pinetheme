@@ -38,6 +38,8 @@ class ThemeModel {
     if (tj) {
       if (tj.theme_version) this.meta.version = String(tj.theme_version);
       if (tj.theme_framework_version) this.meta.frameworkVersion = String(tj.theme_framework_version);
+      if (tj.theme_name || tj.name) this.meta.name = String(tj.theme_name || tj.name);
+      if (tj.author) this.meta.author = String(tj.author);
     }
     // The official themes ship a plain "README" file; new themes use README.md.
     const readme = this.getText('README.md') != null ? this.getText('README.md') : this.getText('README');

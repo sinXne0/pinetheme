@@ -12,5 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   setDirty: (dirty) => ipcRenderer.send('setDirty', dirty),
   openZip: () => ipcRenderer.invoke('openZip'),
   pickAssetFiles: () => ipcRenderer.invoke('pickAssetFiles'),
+  pickThemeRepo: () => ipcRenderer.invoke('pickThemeRepo'),
+  scanThemeRepo: (dir) => ipcRenderer.invoke('scanThemeRepo', dir),
   platform: process.platform
 });

@@ -5,7 +5,7 @@ const fs = require('fs');
 const BINARY_EXT = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.tiff', '.tif',
   '.raw', '.rgb', '.ttf', '.otf', '.woff', '.woff2', '.bin', '.wav',
-  '.mp3', '.ogg', '.mid', '.rtttl', '.so', '.ko', '.gz', '.zip'
+  '.mp3', '.ogg', '.mid', '.rtttl', '.so', '.ko', '.gz', '.zip', '.svg'
 ]);
 
 function isBinaryName(relPath) {
@@ -19,6 +19,7 @@ function readTree(dir) {
   const walk = (d, rel) => {
     const entries = fs.readdirSync(d, { withFileTypes: true });
     for (const e of entries) {
+      if (e.name === '.git' || e.name === '.DS_Store' || e.name === 'node_modules') continue;
       const abs = path.join(d, e.name);
       const relp = rel ? rel + '/' + e.name : e.name;
       if (e.isDirectory()) {
@@ -58,7 +59,7 @@ function createWindow() {
     height: 900,
     minWidth: 1080,
     minHeight: 680,
-    title: 'Pager Theme Builder',
+    title: 'PineTheme Studio',
     backgroundColor: '#040608',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -84,7 +85,7 @@ function createWindow() {
       cancelId: 0,
       title: 'Unsaved changes',
       message: 'You have unsaved changes.',
-      detail: 'Discard your changes and close Pager Theme Builder?'
+      detail: 'Discard your changes and close PineTheme Studio?'
     });
     if (choice === 1) win.__forceClose = true;
     else e.preventDefault();
@@ -185,6 +186,106 @@ ipcMain.handle('pickAssetFiles', async () => {
     name: path.basename(p),
     base64: fs.readFileSync(p).toString('base64')
   }));
+});
+
+// ---- theme library --------------------------------------------------------
+function countTree(dir) {
+  let files = 0, components = 0, assets = 0, bytes = 0;
+  const stack = [dir];
+  while (stack.length) {
+    const d = stack.pop();
+    let entries = [];
+    try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { continue; }
+    for (const e of entries) {
+      if (e.name === '.git' || e.name === '.DS_Store' || e.name === 'node_modules') continue;
+      const abs = path.join(d, e.name);
+      if (e.isDirectory()) {
+        if (e.name === '.git' || e.name === 'node_modules') continue;
+        stack.push(abs);
+      } else if (e.isFile()) {
+        files++;
+        try { bytes += fs.statSync(abs).size; } catch (e) { /* ignore */ }
+        const rel = path.relative(dir, abs).replace(/\\/g, '/');
+        if (rel.startsWith('components/') && rel.endsWith('.json')) components++;
+        if (rel.startsWith('assets/')) assets++;
+      }
+    }
+  }
+  return { files, components, assets, bytes };
+}
+
+function readThemeMeta(dir) {
+  const tjPath = path.join(dir, 'theme.json');
+  if (!fs.existsSync(tjPath)) return null;
+  let tj = {};
+  try { tj = JSON.parse(fs.readFileSync(tjPath, 'utf8')); } catch (e) { return null; }
+  const counts = countTree(dir);
+  let readme = '';
+  for (const name of ['README.md', 'README']) {
+    const p = path.join(dir, name);
+    if (fs.existsSync(p)) {
+      try { readme = fs.readFileSync(p, 'utf8').slice(0, 4000); } catch (e) { /* ignore */ }
+      break;
+    }
+  }
+  const author = tj.author || ((readme.match(/Author:\s*(.+)/i) || [])[1] || '').trim();
+  const palette = tj.color_palette || {};
+  const swatches = Object.values(palette).slice(0, 16).map((c) =>
+    '#' + [c.r || 0, c.g || 0, c.b || 0].map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('')
+  );
+  return {
+    name: path.basename(dir),
+    path: dir,
+    title: tj.theme_name || tj.name || path.basename(dir),
+    author,
+    version: String(tj.theme_version || ''),
+    framework: String(tj.theme_framework_version || ''),
+    components: counts.components,
+    assets: counts.assets,
+    files: counts.files,
+    bytes: counts.bytes,
+    swatches,
+    hasThemeJson: true
+  };
+}
+
+function scanThemeRepo(dir) {
+  let themesDir = dir;
+  const nested = path.join(dir, 'themes');
+  try {
+    if (fs.existsSync(nested) && fs.statSync(nested).isDirectory()) themesDir = nested;
+  } catch (e) { /* ignore */ }
+  const themes = [];
+  try {
+    const entries = fs.readdirSync(themesDir, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (e.name.startsWith('.')) continue;
+      const meta = readThemeMeta(path.join(themesDir, e.name));
+      if (meta) themes.push(meta);
+    }
+  } catch (e) { /* ignore */ }
+  // A single theme folder was selected.
+  if (!themes.length) {
+    const meta = readThemeMeta(dir);
+    if (meta) themes.push(meta);
+  }
+  themes.sort((a, b) => a.name.localeCompare(b.name));
+  return { folderPath: themesDir, themes };
+}
+
+ipcMain.handle('pickThemeRepo', async () => {
+  const res = await dialog.showOpenDialog({
+    title: 'Choose a themes repository or a themes folder',
+    properties: ['openDirectory']
+  });
+  if (res.canceled || !res.filePaths.length) return null;
+  return scanThemeRepo(res.filePaths[0]);
+});
+
+ipcMain.handle('scanThemeRepo', (event, dir) => {
+  if (!dir || !fs.existsSync(dir)) return null;
+  return scanThemeRepo(dir);
 });
 
 app.whenReady().then(() => {
